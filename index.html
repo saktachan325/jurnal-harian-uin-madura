@@ -152,7 +152,7 @@
                     <input type="text" id="note-title" name="title" class="w-full text-2xl font-extrabold border-b-2 border-slate-100 dark:border-slate-700 px-2 py-3 focus:border-primary-500 outline-none bg-transparent dark:text-white transition-colors" placeholder="Judul Catatan..." required>
                 </div>
                 <div>
-                    <textarea id="note-content" name="content" rows="18" class="w-full bg-yellow-50/50 dark:bg-slate-700/50 border border-yellow-100 dark:border-slate-600 rounded-2xl p-5 md:p-6 focus:ring-2 focus:ring-primary-300 outline-none text-slate-700 dark:text-slate-200 resize-y leading-relaxed text-base md:text-lg min-h-[400px] transition-colors" placeholder="Mulai menulis detail catatan kuliahmu di sini... (Area ini sudah diperlebar dan dipertinggi)" required></textarea>
+                    <textarea id="note-content" name="content" rows="18" class="w-full bg-yellow-50/50 dark:bg-slate-700/50 border border-yellow-100 dark:border-slate-600 rounded-2xl p-5 md:p-6 focus:ring-2 focus:ring-primary-300 outline-none text-slate-700 dark:text-slate-200 resize-y leading-relaxed text-base md:text-lg min-h-[400px] transition-colors" placeholder="Mulai menulis detail catatan kuliahmu di sini..." required></textarea>
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button type="button" onclick="window.closeModal('modal-note')" class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
@@ -217,10 +217,12 @@
         </div>
     </div>
 
-    <!-- SCRIPT UTAMA (UI & State) -->
+    <!-- SCRIPT UTAMA (State, LocalStorage & UI) -->
     <script>
-        // State Default (Offline First)
-        window.state = {
+        const STORAGE_KEY = 'kuliahku_app_data_v1';
+
+        // Default State (jika baru pertama kali buka)
+        const defaultState = {
             activeTab: 'dashboard',
             activeCourseId: null,
             detailTab: 'notes',
@@ -237,9 +239,33 @@
             courses: []
         };
 
-        // Fungsi Default untuk Save (Bisa di-override oleh Firebase)
-        window.saveProfileToCloud = async () => {};
-        window.saveCourseToCloud = async () => {};
+        // 1. Tarik Data dari Memori Perangkat (Local Storage)
+        const loadSavedData = () => {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    window.state = JSON.parse(savedData);
+                } else {
+                    window.state = JSON.parse(JSON.stringify(defaultState));
+                }
+            } catch (e) {
+                console.error("Gagal membaca memori, menggunakan data default.", e);
+                window.state = JSON.parse(JSON.stringify(defaultState));
+            }
+        };
+
+        // 2. Simpan Data ke Memori Perangkat (Local Storage)
+        window.saveData = () => {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(window.state));
+            } catch (e) {
+                console.error("Gagal menyimpan data ke memori perangkat.", e);
+                alert("Memori penyimpanan browser Anda penuh atau tidak diizinkan.");
+            }
+        };
+
+        // Panggil loading pertama kali
+        loadSavedData();
 
         // Helper Tanggal
         const hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -265,13 +291,24 @@
             if(window.state.darkMode) { document.documentElement.classList.add('dark'); } 
             else { document.documentElement.classList.remove('dark'); }
         };
-        window.changeTheme = (color) => { window.state.theme = color; window.applyTheme(); window.renderApp(); window.saveProfileToCloud(); };
-        window.toggleDarkMode = () => { window.state.darkMode = !window.state.darkMode; window.applyTheme(); window.renderApp(); window.saveProfileToCloud(); };
+        window.changeTheme = (color) => { 
+            window.state.theme = color; 
+            window.applyTheme(); 
+            window.saveData(); // Save Perubahan Warna
+            window.renderApp(); 
+        };
+        window.toggleDarkMode = () => { 
+            window.state.darkMode = !window.state.darkMode; 
+            window.applyTheme(); 
+            window.saveData(); // Save Perubahan Dark Mode
+            window.renderApp(); 
+        };
 
         // Navigation
         window.navigateTo = (tab, courseId = null) => {
             window.state.activeTab = tab;
             if (courseId) { window.state.activeCourseId = courseId; window.state.detailTab = 'notes'; }
+            window.saveData(); // Pastikan state terupdate ke disk saat pindah
             window.renderNavUI(); window.renderApp();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
@@ -483,7 +520,11 @@
                 </div>`;
         }
 
-        window.switchDetailTab = (tab) => { window.state.detailTab = tab; window.renderApp(); };
+        window.switchDetailTab = (tab) => { 
+            window.state.detailTab = tab; 
+            window.saveData(); // Simpan tab state
+            window.renderApp(); 
+        };
 
         function renderCourseDetail() {
             const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
@@ -624,7 +665,7 @@
                                         <textarea name="bio" rows="2" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors">${window.state.profile.bio}</textarea>
                                     </div>
                                 </div>
-                                <button type="submit" class="w-full bg-slate-800 dark:bg-primary-600 hover:bg-slate-900 dark:hover:bg-primary-700 text-white font-bold py-4 rounded-xl mt-4 shadow-lg transition-all">Simpan Profil Secara Permanen</button>
+                                <button type="submit" class="w-full bg-slate-800 dark:bg-primary-600 hover:bg-slate-900 dark:hover:bg-primary-700 text-white font-bold py-4 rounded-xl mt-4 shadow-lg transition-all">Simpan Profil</button>
                             </form>
                         </div>
                     </div>
@@ -655,7 +696,7 @@
                             </label>
                         </div>
                         <div class="pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-xs font-bold text-slate-500 mb-4 flex items-center justify-center gap-2 py-2 rounded-lg" id="cloud-status"><i class="ph-fill ph-cloud-slash text-lg"></i> Offline Mode (Menyimpan Sementara)</p>
+                            <p class="text-xs font-bold text-green-600 dark:text-green-400 mb-4 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg"><i class="ph-fill ph-floppy-disk text-lg"></i> Data Tersimpan Aman di Perangkat Anda</p>
                         </div>
                     </div>
                 </div>`;
@@ -666,7 +707,11 @@
             const course = window.state.courses.find(c => c.id === cId);
             if(course) {
                 const assign = course.assignments.find(a => a.id === aId);
-                if(assign) { assign.isCompleted = !assign.isCompleted; window.saveCourseToCloud(course); window.renderApp(); }
+                if(assign) { 
+                    assign.isCompleted = !assign.isCompleted; 
+                    window.saveData(); 
+                    window.renderApp(); 
+                }
             }
         };
 
@@ -676,7 +721,9 @@
                 name: fd.get('name'), nim: fd.get('nim'), university: fd.get('university'),
                 major: fd.get('major'), bio: fd.get('bio'), avatarUrl: fd.get('avatarUrl')
             };
-            window.saveProfileToCloud(); alert('Mantap! Profil berhasil disimpan.'); window.renderApp();
+            window.saveData(); 
+            alert('Mantap! Profil berhasil disimpan di perangkat Anda.'); 
+            window.renderApp();
         };
 
         // Modal Logic
@@ -696,10 +743,11 @@
             const cData = { id: isEditId || window.generateId(), name: fd.get('name'), lecturer: fd.get('lecturer'), day: fd.get('day'), time: fd.get('time'), room: fd.get('room') };
             if (isEditId) {
                 const idx = window.state.courses.findIndex(c => c.id === isEditId);
-                if(idx > -1) { window.state.courses[idx] = { ...window.state.courses[idx], ...cData }; window.saveCourseToCloud(window.state.courses[idx]); }
+                if(idx > -1) { window.state.courses[idx] = { ...window.state.courses[idx], ...cData }; }
             } else {
-                cData.notes = []; cData.assignments = []; window.state.courses.push(cData); window.saveCourseToCloud(cData);
+                cData.notes = []; cData.assignments = []; window.state.courses.push(cData); 
             }
+            window.saveData();
             window.closeModal('modal-course'); window.renderApp();
         });
 
@@ -714,7 +762,8 @@
             } else {
                 course.notes.unshift({ id: window.generateId(), title: fd.get('title'), content: fd.get('content'), date: new Date().toISOString() });
             }
-            window.saveCourseToCloud(course); window.closeModal('modal-note'); window.renderApp();
+            window.saveData(); 
+            window.closeModal('modal-note'); window.renderApp();
         });
 
         document.getElementById('form-assignment').addEventListener('submit', (e) => {
@@ -730,7 +779,8 @@
                 data.id = window.generateId(); data.isCompleted = false; course.assignments.push(data);
             }
             course.assignments.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
-            window.saveCourseToCloud(course); window.closeModal('modal-assignment'); window.renderApp();
+            window.saveData(); 
+            window.closeModal('modal-assignment'); window.renderApp();
         });
 
         window.openCourseModal = (courseId = null) => {
@@ -773,95 +823,11 @@
             window.openModal('modal-assignment');
         };
 
-        // Render UI Secara Instan! (Layar tidak akan pernah putih)
+        // Render UI Pertama Kali
         window.applyTheme();
         window.renderNavUI();
         window.renderApp();
 
-    </script>
-
-    <!-- SCRIPT CLOUD (Berjalan Diam-diam di Latar Belakang) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const initCloud = async () => {
-            try {
-                if (typeof __firebase_config === 'undefined') return;
-                
-                const app = initializeApp(JSON.parse(__firebase_config));
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuliahku-app';
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                onAuthStateChanged(auth, (user) => {
-                    if (!user) return;
-
-                    // Buat fungsi save terhubung ke Cloud
-                    window.saveProfileToCloud = async () => {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'profileSettings'), {
-                            profile: window.state.profile, settings: { theme: window.state.theme, darkMode: window.state.darkMode }
-                        });
-                    };
-                    window.saveCourseToCloud = async (courseObj) => {
-                        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'courses', courseObj.id), courseObj);
-                    };
-
-                    // Tarik Profile dari Cloud
-                    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'profileSettings');
-                    onSnapshot(profileRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            window.state.profile = data.profile || window.state.profile;
-                            window.state.theme = data.settings?.theme || 'blue';
-                            window.state.darkMode = data.settings?.darkMode || false;
-                            window.applyTheme();
-                            window.renderApp();
-                        } else {
-                            window.saveProfileToCloud(); // Simpan default
-                        }
-                    }, (e) => console.error(e));
-
-                    // Tarik Mata Kuliah & Tugas dari Cloud
-                    const coursesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'courses');
-                    onSnapshot(coursesRef, (querySnap) => {
-                        const loadedCourses = [];
-                        querySnap.forEach((d) => loadedCourses.push(d.data()));
-                        window.state.courses = loadedCourses;
-                        
-                        // Update status di halaman pengaturan jika sedang dibuka
-                        const statusEl = document.getElementById('cloud-status');
-                        if(statusEl) {
-                            statusEl.innerHTML = '<i class="ph-fill ph-cloud-check text-lg"></i> Tersinkronisasi dengan Cloud (Data Aman)';
-                            statusEl.className = 'text-xs font-bold text-green-600 dark:text-green-400 mb-4 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg';
-                        }
-                        
-                        // Hilangkan logo loading dan render UI
-                        const loader = document.getElementById('global-loader');
-                        if(loader) {
-                            loader.classList.add('opacity-0', 'pointer-events-none');
-                            setTimeout(() => loader.remove(), 300);
-                        }
-                        
-                        window.renderApp();
-                    }, (e) => console.error(e));
-                });
-            } catch (err) {
-                console.error("Cloud Error:", err);
-                const loader = document.getElementById('global-loader');
-                if(loader) loader.remove();
-            }
-        };
-
-        // Mulai proses cloud
-        initCloud();
     </script>
 
     <script>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jurnal harian uin madura-v1773483849804';
+const CACHE_NAME = 'jurnal harian uin madura-v1773484396874';
 const urlsToCache = [
   './',
   './index.html',
