@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KuliahKu - Aplikasi Catatan Kuliah</title>
     
-    <!-- Tailwind CSS with Custom Config for Dynamic Themes -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -29,7 +29,6 @@
 
     <!-- Custom CSS -->
     <style>
-        /* Theme Variables */
         :root {
             --p-50: #eff6ff; --p-100: #dbeafe; --p-200: #bfdbfe;
             --p-500: #3b82f6; --p-600: #2563eb; --p-700: #1d4ed8;
@@ -51,7 +50,6 @@
             --p-800: #9f1239; --p-900: #881337;
         }
 
-        /* Animations */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -67,7 +65,6 @@
             background-color: #334155; color: var(--p-500);
         }
         
-        /* Area aman untuk taskbar HP modern */
         .safe-pb { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
     </style>
 
@@ -95,19 +92,13 @@
         </div>
     </header>
 
-    <!-- Loading Overlay -->
-    <div id="global-loader" class="fixed inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity duration-300">
-        <i class="ph ph-spinner-gap animate-spin text-primary-500 text-5xl mb-4"></i>
-        <p class="font-bold text-slate-600 dark:text-slate-300">Menyinkronkan Data Cloud...</p>
-    </div>
-
     <!-- Main Content Area -->
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative min-h-[80vh]" id="main-content"></main>
 
     <!-- Mobile Bottom Taskbar -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around p-3 safe-pb shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-40 transition-colors duration-300" id="mobile-nav"></nav>
 
-    <!-- MODAL TAMBAH/EDIT MATA KULIAH -->
+    <!-- MODAL MATA KULIAH -->
     <div id="modal-course" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-all duration-300 transform border border-slate-100 dark:border-slate-700" id="modal-course-content">
             <div class="bg-primary-600 dark:bg-primary-700 p-4 text-white flex justify-between items-center">
@@ -148,10 +139,9 @@
         </div>
     </div>
 
-    <!-- MODAL TAMBAH/EDIT CATATAN (DIPERBESAR) -->
+    <!-- MODAL CATATAN (DIPERLUAS & DIPERBESAR) -->
     <div id="modal-note" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 md:p-8 opacity-0 transition-opacity duration-300 overflow-y-auto">
-        <!-- max-w-2xl untuk memperlebar area form -->
-        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 transform border border-slate-100 dark:border-slate-700 my-8" id="modal-note-content">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 transform border border-slate-100 dark:border-slate-700 my-8" id="modal-note-content">
             <div class="bg-primary-600 dark:bg-primary-700 p-4 md:p-5 text-white flex justify-between items-center">
                 <h3 class="font-bold text-lg flex items-center gap-2" id="modal-note-title"><i class="ph-fill ph-file-text"></i> Catatan</h3>
                 <button onclick="window.closeModal('modal-note')" class="text-primary-200 hover:text-white text-2xl leading-none">&times;</button>
@@ -162,8 +152,7 @@
                     <input type="text" id="note-title" name="title" class="w-full text-2xl font-extrabold border-b-2 border-slate-100 dark:border-slate-700 px-2 py-3 focus:border-primary-500 outline-none bg-transparent dark:text-white transition-colors" placeholder="Judul Catatan..." required>
                 </div>
                 <div>
-                    <!-- rows="15" dan min-h-[350px] untuk mempertinggi area catatan -->
-                    <textarea id="note-content" name="content" rows="15" class="w-full bg-yellow-50/50 dark:bg-slate-700/50 border border-yellow-100 dark:border-slate-600 rounded-2xl p-5 md:p-6 focus:ring-2 focus:ring-primary-300 outline-none text-slate-700 dark:text-slate-200 resize-y leading-relaxed text-base md:text-lg min-h-[350px] transition-colors" placeholder="Mulai menulis detail catatan kuliahmu di sini..." required></textarea>
+                    <textarea id="note-content" name="content" rows="18" class="w-full bg-yellow-50/50 dark:bg-slate-700/50 border border-yellow-100 dark:border-slate-600 rounded-2xl p-5 md:p-6 focus:ring-2 focus:ring-primary-300 outline-none text-slate-700 dark:text-slate-200 resize-y leading-relaxed text-base md:text-lg min-h-[400px] transition-colors" placeholder="Mulai menulis detail catatan kuliahmu di sini... (Area ini sudah diperlebar dan dipertinggi)" required></textarea>
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button type="button" onclick="window.closeModal('modal-note')" class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
@@ -173,7 +162,7 @@
         </div>
     </div>
 
-    <!-- MODAL TAMBAH/EDIT TUGAS -->
+    <!-- MODAL TUGAS -->
     <div id="modal-assignment" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300 transform my-8 border border-slate-100 dark:border-slate-700" id="modal-assignment-content">
             <div class="bg-gradient-to-r from-primary-700 to-primary-500 p-5 text-white flex justify-between items-center">
@@ -228,17 +217,9 @@
         </div>
     </div>
 
-    <!-- MAIN SCRIPT -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuliahku-app';
-        let db, auth, currentUser;
-        let isDataLoaded = false;
-
-        // State Utama Aplikasi
+    <!-- SCRIPT UTAMA (UI & State) -->
+    <script>
+        // State Default (Offline First)
         window.state = {
             activeTab: 'dashboard',
             activeCourseId: null,
@@ -256,6 +237,11 @@
             courses: []
         };
 
+        // Fungsi Default untuk Save (Bisa di-override oleh Firebase)
+        window.saveProfileToCloud = async () => {};
+        window.saveCourseToCloud = async () => {};
+
+        // Helper Tanggal
         const hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const getTodayName = () => hariIndo[new Date().getDay()];
         const getTomorrowName = () => hariIndo[new Date(new Date().setDate(new Date().getDate() + 1)).getDay()];
@@ -266,105 +252,23 @@
             return new Date(d).toDateString() === tmrw.toDateString();
         };
         window.formatDate = (dateString, includeTime = true) => {
+            if(!dateString) return '';
             const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             if(includeTime) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
             return new Date(dateString).toLocaleDateString('id-ID', opts);
         };
-        window.generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        window.generateId = () => Date.now().toString() + Math.random().toString(36).slice(2, 7);
 
-        // ================= INIT FIREBASE (Cloud Sync) =================
-        if (typeof __firebase_config !== 'undefined') {
-            const app = initializeApp(JSON.parse(__firebase_config));
-            auth = getAuth(app);
-            db = getFirestore(app);
-
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            };
-            initAuth();
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    setupCloudListeners();
-                }
-            });
-        } else {
-            // Fallback render jika cloud gagal/tidak didukung
-            checkAndHideLoader();
-        }
-
-        function setupCloudListeners() {
-            // Dengarkan Profile
-            const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profileSettings');
-            onSnapshot(profileRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    window.state.profile = data.profile || window.state.profile;
-                    window.state.theme = data.settings?.theme || 'blue';
-                    window.state.darkMode = data.settings?.darkMode || false;
-                } else { saveProfileToCloud(); }
-                applyTheme();
-                checkAndHideLoader();
-            }, (err) => console.error(err));
-
-            // Dengarkan Courses (Mata Kuliah + Tugas + Catatan)
-            const coursesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'courses');
-            onSnapshot(coursesRef, (querySnap) => {
-                const loadedCourses = [];
-                querySnap.forEach((d) => loadedCourses.push(d.data()));
-                window.state.courses = loadedCourses;
-                checkAndHideLoader();
-            }, (err) => console.error(err));
-        }
-
-        function checkAndHideLoader() {
-            if(!isDataLoaded) {
-                isDataLoaded = true;
-                const loader = document.getElementById('global-loader');
-                if(loader) {
-                    loader.classList.add('opacity-0', 'pointer-events-none');
-                    setTimeout(() => loader.classList.add('hidden'), 300);
-                }
-            }
-            // MENGHINDARI BUG TASKBAR HILANG: Harus dipanggil secara eksplisit setiap render
-            window.renderNavUI();
-            window.renderApp();
-        }
-
-        // ================= CLOUD WRITERS =================
-        async function saveProfileToCloud() {
-            if(!currentUser || !db) return;
-            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profileSettings'), {
-                profile: window.state.profile,
-                settings: { theme: window.state.theme, darkMode: window.state.darkMode }
-            });
-        }
-        async function saveCourseToCloud(courseObj) {
-            if(!currentUser || !db) return;
-            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'courses', courseObj.id), courseObj);
-        }
-
-        // ================= UI & THEME ENGINE =================
-        function applyTheme() {
+        // Theme Engine
+        window.applyTheme = () => {
             document.documentElement.setAttribute('data-theme', window.state.theme);
             if(window.state.darkMode) { document.documentElement.classList.add('dark'); } 
             else { document.documentElement.classList.remove('dark'); }
-        }
-        
-        window.changeTheme = (color) => {
-            window.state.theme = color; applyTheme(); window.renderApp(); saveProfileToCloud();
         };
+        window.changeTheme = (color) => { window.state.theme = color; window.applyTheme(); window.renderApp(); window.saveProfileToCloud(); };
+        window.toggleDarkMode = () => { window.state.darkMode = !window.state.darkMode; window.applyTheme(); window.renderApp(); window.saveProfileToCloud(); };
 
-        window.toggleDarkMode = () => {
-            window.state.darkMode = !window.state.darkMode; applyTheme(); window.renderApp(); saveProfileToCloud();
-        };
-
-        // ================= ROUTING & RENDERING =================
+        // Navigation
         window.navigateTo = (tab, courseId = null) => {
             window.state.activeTab = tab;
             if (courseId) { window.state.activeCourseId = courseId; window.state.detailTab = 'notes'; }
@@ -396,6 +300,7 @@
             document.getElementById('mobile-nav').innerHTML = tabs.map(renderMobileBtn).join('');
         };
 
+        // UI Render Engine
         window.renderApp = () => {
             const fname = window.state.profile.name.split(' ')[0] || 'Aplikasi';
             document.getElementById('app-header-title').innerText = `Aplikasi ${fname}`;
@@ -434,10 +339,11 @@
             const coursesTomorrow = window.state.courses.filter(c => c.day === getTomorrowName());
 
             let scheduleHtml = '';
-            const renderCard = (c, badgeText, bCol) => `
-                <div onclick="window.navigateTo('courseDetail', '${c.id}')" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl flex-shrink-0 w-64 md:w-72 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+            const renderCard = (c, badgeText, bCol) => {
+                const badgeStyle = bCol === 'primary' ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
+                return `<div onclick="window.navigateTo('courseDetail', '${c.id}')" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl flex-shrink-0 w-64 md:w-72 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-bold px-2 py-1 rounded-md bg-${bCol}-100 text-${bCol}-700 dark:bg-${bCol}-900/30 dark:text-${bCol}-400 uppercase tracking-wider">${badgeText}</span>
+                        <span class="text-[10px] font-bold px-2 py-1 rounded-md ${badgeStyle} uppercase tracking-wider">${badgeText}</span>
                         <i class="ph-fill ph-book-bookmark text-primary-500 text-xl"></i>
                     </div>
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1 truncate">${c.name}</h4>
@@ -447,6 +353,7 @@
                         <span class="truncate"><i class="ph ph-map-pin text-primary-500"></i> ${c.room}</span>
                     </div>
                 </div>`;
+            };
 
             if (!coursesToday.length && !coursesTomorrow.length) {
                 scheduleHtml = `<p class="text-sm text-slate-500 italic py-2">Tidak ada jadwal kuliah untuk hari ini dan besok. Bersantai sejenak! 🌴</p>`;
@@ -497,7 +404,7 @@
                             <div class="flex justify-between items-center bg-white dark:bg-slate-700 p-3 rounded-xl shadow-sm border border-primary-50 dark:border-slate-600">
                                 <div>
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">${a.title}</p>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400">${a.courseName} • ${new Date(a.dueDate).toLocaleDateString('id-ID')}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${a.courseName} • ${window.formatDate(a.dueDate, false)}</p>
                                 </div>
                                 <button onclick="window.toggleAssignmentStatus('${a.courseId}', '${a.id}')" class="text-primary-400 hover:text-primary-600"><i class="ph ph-circle text-2xl"></i></button>
                             </div>
@@ -571,7 +478,7 @@
                             <i class="ph ph-plus text-xl"></i> <span class="hidden md:inline">Tambah</span>
                         </button>
                     </div>
-                    ${!window.state.courses.length ? `<div class="bg-white dark:bg-slate-800 border-dashed border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-10 text-center text-slate-500 dark:text-slate-400"><i class="ph ph-books text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p>Belum ada mata kuliah. Yuk, tambahkan jadwal kuliahmu!</p></div>` : `
+                    ${!window.state.courses.length ? `<div class="bg-white dark:bg-slate-800 border-dashed border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-10 text-center text-slate-500 dark:text-slate-400"><i class="ph ph-books text-5xl mb-3 text-slate-300 dark:text-slate-600 inline-block"></i><p>Belum ada mata kuliah. Yuk, tambahkan jadwal kuliahmu!</p></div>` : `
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${cards}</div>`}
                 </div>`;
         }
@@ -585,8 +492,8 @@
             let tabContent = '';
             if (window.state.detailTab === 'notes') {
                 let notesHtml = !course.notes.length 
-                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-file-text text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p class="text-slate-500">Belum ada catatan di mata kuliah ini.</p></div>`
-                    : `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-file-text text-5xl mb-3 text-slate-300 dark:text-slate-600 inline-block"></i><p class="text-slate-500">Belum ada catatan di mata kuliah ini.</p></div>`
+                    : `<div class="grid grid-cols-1 gap-4">
                         ${course.notes.map(note => `
                             <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
                                 <div class="absolute top-0 left-0 w-1 h-full bg-primary-500"></div>
@@ -604,7 +511,7 @@
                         </div>${notesHtml}</div>`;
             } else {
                 let assignHtml = !course.assignments.length
-                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-list-checks text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p class="text-slate-500">Yey! Belum ada tugas yang diberikan.</p></div>`
+                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-list-checks text-5xl mb-3 text-slate-300 dark:text-slate-600 inline-block"></i><p class="text-slate-500">Yey! Belum ada tugas yang diberikan.</p></div>`
                     : `<div class="space-y-3">
                         ${course.assignments.map(assign => `
                             <div class="p-5 rounded-3xl border transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative group ${assign.isCompleted ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' : 'bg-white dark:bg-slate-800 border-primary-100 dark:border-slate-600 shadow-sm'}">
@@ -748,42 +655,34 @@
                             </label>
                         </div>
                         <div class="pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
-                            <p class="text-xs font-bold text-green-600 dark:text-green-400 mb-4 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg"><i class="ph-fill ph-cloud-check text-lg"></i> Tersinkronisasi dengan Cloud</p>
+                            <p class="text-xs font-bold text-slate-500 mb-4 flex items-center justify-center gap-2 py-2 rounded-lg" id="cloud-status"><i class="ph-fill ph-cloud-slash text-lg"></i> Offline Mode (Menyimpan Sementara)</p>
                         </div>
                     </div>
                 </div>`;
         }
 
-        // ================= FORM ACTIONS & EDIT LOGIC =================
+        // Action Handlers
         window.toggleAssignmentStatus = (cId, aId) => {
             const course = window.state.courses.find(c => c.id === cId);
             if(course) {
                 const assign = course.assignments.find(a => a.id === aId);
-                if(assign) {
-                    assign.isCompleted = !assign.isCompleted;
-                    saveCourseToCloud(course); 
-                    window.renderApp(); 
-                }
+                if(assign) { assign.isCompleted = !assign.isCompleted; window.saveCourseToCloud(course); window.renderApp(); }
             }
         };
 
         window.handleUpdateProfile = (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
+            e.preventDefault(); const fd = new FormData(e.target);
             window.state.profile = {
                 name: fd.get('name'), nim: fd.get('nim'), university: fd.get('university'),
                 major: fd.get('major'), bio: fd.get('bio'), avatarUrl: fd.get('avatarUrl')
             };
-            saveProfileToCloud();
-            alert('Mantap! Profil berhasil disimpan secara permanen di Cloud.');
-            window.renderApp();
+            window.saveProfileToCloud(); alert('Mantap! Profil berhasil disimpan.'); window.renderApp();
         };
 
-        // --- MODAL UTILS ---
+        // Modal Logic
         window.openModal = (id) => {
             const m = document.getElementById(id), c = document.getElementById(`${id}-content`);
-            m.classList.remove('hidden');
-            setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10);
+            m.classList.remove('hidden'); setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10);
         };
         window.closeModal = (id) => {
             const m = document.getElementById(id), c = document.getElementById(`${id}-content`);
@@ -791,146 +690,178 @@
             setTimeout(() => { m.classList.add('hidden'); document.getElementById(`form-${id.split('-')[1]}`).reset(); }, 300);
         };
 
-        // --- COURSE MODAL (ADD / EDIT) ---
-        window.openCourseModal = (courseId = null) => {
-            document.getElementById('form-course').reset();
-            if (courseId) {
-                const c = window.state.courses.find(x => x.id === courseId);
-                if(c) {
-                    document.getElementById('modal-course-title').innerText = 'Edit Mata Kuliah';
-                    document.getElementById('course-edit-id').value = c.id;
-                    document.getElementById('course-name').value = c.name;
-                    document.getElementById('course-lecturer').value = c.lecturer;
-                    document.getElementById('course-day').value = c.day;
-                    document.getElementById('course-time').value = c.time;
-                    document.getElementById('course-room').value = c.room;
-                }
-            } else {
-                document.getElementById('modal-course-title').innerText = 'Tambah Mata Kuliah';
-                document.getElementById('course-edit-id').value = '';
-            }
-            window.openModal('modal-course');
-        };
-
+        // Form Submit Handlers
         document.getElementById('form-course').addEventListener('submit', (e) => {
-            e.preventDefault(); const fd = new FormData(e.target);
-            const isEditId = fd.get('id');
-            const cData = {
-                id: isEditId || window.generateId(), name: fd.get('name'), lecturer: fd.get('lecturer'),
-                day: fd.get('day'), time: fd.get('time'), room: fd.get('room'),
-            };
-
+            e.preventDefault(); const fd = new FormData(e.target); const isEditId = fd.get('id');
+            const cData = { id: isEditId || window.generateId(), name: fd.get('name'), lecturer: fd.get('lecturer'), day: fd.get('day'), time: fd.get('time'), room: fd.get('room') };
             if (isEditId) {
                 const idx = window.state.courses.findIndex(c => c.id === isEditId);
-                if(idx > -1) {
-                    window.state.courses[idx] = { ...window.state.courses[idx], ...cData };
-                    saveCourseToCloud(window.state.courses[idx]);
-                }
+                if(idx > -1) { window.state.courses[idx] = { ...window.state.courses[idx], ...cData }; window.saveCourseToCloud(window.state.courses[idx]); }
             } else {
-                cData.notes = []; cData.assignments = [];
-                window.state.courses.push(cData);
-                saveCourseToCloud(cData);
+                cData.notes = []; cData.assignments = []; window.state.courses.push(cData); window.saveCourseToCloud(cData);
             }
             window.closeModal('modal-course'); window.renderApp();
         });
-
-        // --- NOTE MODAL (ADD / EDIT) ---
-        window.openNoteModal = (noteId = null) => {
-            document.getElementById('form-note').reset();
-            if (noteId) {
-                const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
-                const n = course.notes.find(x => x.id === noteId);
-                if (n) {
-                    document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Edit Catatan';
-                    document.getElementById('note-edit-id').value = n.id;
-                    document.getElementById('note-title').value = n.title;
-                    document.getElementById('note-content').value = n.content;
-                }
-            } else {
-                document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Buat Catatan';
-                document.getElementById('note-edit-id').value = '';
-            }
-            window.openModal('modal-note');
-        };
 
         document.getElementById('form-note').addEventListener('submit', (e) => {
             e.preventDefault(); const fd = new FormData(e.target);
             const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
             if (!course) return;
-
             const isEditId = fd.get('id');
             if (isEditId) {
                 const nIdx = course.notes.findIndex(x => x.id === isEditId);
-                if (nIdx > -1) {
-                    course.notes[nIdx].title = fd.get('title');
-                    course.notes[nIdx].content = fd.get('content');
-                }
+                if (nIdx > -1) { course.notes[nIdx].title = fd.get('title'); course.notes[nIdx].content = fd.get('content'); }
             } else {
                 course.notes.unshift({ id: window.generateId(), title: fd.get('title'), content: fd.get('content'), date: new Date().toISOString() });
             }
-            saveCourseToCloud(course);
-            window.closeModal('modal-note'); window.renderApp();
+            window.saveCourseToCloud(course); window.closeModal('modal-note'); window.renderApp();
         });
-
-        // --- ASSIGNMENT MODAL (ADD / EDIT) ---
-        window.toggleGroupMembers = (isGroup) => {
-            const cont = document.getElementById('group-members-container');
-            if(isGroup) { cont.classList.remove('hidden'); } else { cont.classList.add('hidden'); }
-        };
-
-        window.openAssignModal = (assignId = null) => {
-            document.getElementById('form-assignment').reset();
-            window.toggleGroupMembers(false);
-            
-            if (assignId) {
-                const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
-                const a = course.assignments.find(x => x.id === assignId);
-                if (a) {
-                    document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Edit Tugas';
-                    document.getElementById('assign-edit-id').value = a.id;
-                    document.getElementById('assign-title').value = a.title;
-                    document.getElementById('assign-type').value = a.type;
-                    
-                    const d = new Date(a.dueDate);
-                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                    document.getElementById('assign-date').value = d.toISOString().slice(0,16);
-
-                    if(a.isGroup) { document.getElementById('assign-group').checked = true; window.toggleGroupMembers(true); document.getElementById('assign-members').value = a.members; }
-                    else { document.getElementById('assign-indiv').checked = true; }
-                }
-            } else {
-                document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Tugas Baru';
-                document.getElementById('assign-edit-id').value = '';
-                const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                document.getElementById('assign-date').value = d.toISOString().slice(0,16);
-            }
-            window.openModal('modal-assignment');
-        };
 
         document.getElementById('form-assignment').addEventListener('submit', (e) => {
             e.preventDefault(); const fd = new FormData(e.target);
             const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
             if(!course) return;
-
-            const isGroup = fd.get('isGroup') === 'true';
-            const isEditId = fd.get('id');
-            const data = {
-                title: fd.get('title'), type: fd.get('type'), isGroup: isGroup,
-                members: isGroup ? fd.get('members') : '', dueDate: fd.get('dueDate')
-            };
-
+            const isGroup = fd.get('isGroup') === 'true'; const isEditId = fd.get('id');
+            const data = { title: fd.get('title'), type: fd.get('type'), isGroup: isGroup, members: isGroup ? fd.get('members') : '', dueDate: fd.get('dueDate') };
             if (isEditId) {
                 const idx = course.assignments.findIndex(x => x.id === isEditId);
                 if(idx > -1) { course.assignments[idx] = { ...course.assignments[idx], ...data }; }
             } else {
-                data.id = window.generateId(); data.isCompleted = false;
-                course.assignments.push(data);
+                data.id = window.generateId(); data.isCompleted = false; course.assignments.push(data);
             }
             course.assignments.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
-            saveCourseToCloud(course);
-            window.closeModal('modal-assignment'); window.renderApp();
+            window.saveCourseToCloud(course); window.closeModal('modal-assignment'); window.renderApp();
         });
 
+        window.openCourseModal = (courseId = null) => {
+            document.getElementById('form-course').reset();
+            if (courseId) {
+                const c = window.state.courses.find(x => x.id === courseId);
+                if(c) {
+                    document.getElementById('modal-course-title').innerText = 'Edit Mata Kuliah'; document.getElementById('course-edit-id').value = c.id;
+                    document.getElementById('course-name').value = c.name; document.getElementById('course-lecturer').value = c.lecturer;
+                    document.getElementById('course-day').value = c.day; document.getElementById('course-time').value = c.time; document.getElementById('course-room').value = c.room;
+                }
+            } else { document.getElementById('modal-course-title').innerText = 'Tambah Mata Kuliah'; document.getElementById('course-edit-id').value = ''; }
+            window.openModal('modal-course');
+        };
+
+        window.openNoteModal = (noteId = null) => {
+            document.getElementById('form-note').reset();
+            if (noteId) {
+                const course = window.state.courses.find(c => c.id === window.state.activeCourseId); const n = course.notes.find(x => x.id === noteId);
+                if (n) { document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Edit Catatan'; document.getElementById('note-edit-id').value = n.id; document.getElementById('note-title').value = n.title; document.getElementById('note-content').value = n.content; }
+            } else { document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Buat Catatan Baru'; document.getElementById('note-edit-id').value = ''; }
+            window.openModal('modal-note');
+        };
+
+        window.toggleGroupMembers = (isGroup) => { const cont = document.getElementById('group-members-container'); if(isGroup) { cont.classList.remove('hidden'); } else { cont.classList.add('hidden'); } };
+        window.openAssignModal = (assignId = null) => {
+            document.getElementById('form-assignment').reset(); window.toggleGroupMembers(false);
+            if (assignId) {
+                const course = window.state.courses.find(c => c.id === window.state.activeCourseId); const a = course.assignments.find(x => x.id === assignId);
+                if (a) {
+                    document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Edit Tugas'; document.getElementById('assign-edit-id').value = a.id;
+                    document.getElementById('assign-title').value = a.title; document.getElementById('assign-type').value = a.type;
+                    const d = new Date(a.dueDate); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); document.getElementById('assign-date').value = d.toISOString().slice(0,16);
+                    if(a.isGroup) { document.getElementById('assign-group').checked = true; window.toggleGroupMembers(true); document.getElementById('assign-members').value = a.members; } else { document.getElementById('assign-indiv').checked = true; }
+                }
+            } else {
+                document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Tugas Baru'; document.getElementById('assign-edit-id').value = '';
+                const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); document.getElementById('assign-date').value = d.toISOString().slice(0,16);
+            }
+            window.openModal('modal-assignment');
+        };
+
+        // Render UI Secara Instan! (Layar tidak akan pernah putih)
+        window.applyTheme();
+        window.renderNavUI();
+        window.renderApp();
+
+    </script>
+
+    <!-- SCRIPT CLOUD (Berjalan Diam-diam di Latar Belakang) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const initCloud = async () => {
+            try {
+                if (typeof __firebase_config === 'undefined') return;
+                
+                const app = initializeApp(JSON.parse(__firebase_config));
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuliahku-app';
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (!user) return;
+
+                    // Buat fungsi save terhubung ke Cloud
+                    window.saveProfileToCloud = async () => {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'profileSettings'), {
+                            profile: window.state.profile, settings: { theme: window.state.theme, darkMode: window.state.darkMode }
+                        });
+                    };
+                    window.saveCourseToCloud = async (courseObj) => {
+                        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'courses', courseObj.id), courseObj);
+                    };
+
+                    // Tarik Profile dari Cloud
+                    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'profileSettings');
+                    onSnapshot(profileRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            window.state.profile = data.profile || window.state.profile;
+                            window.state.theme = data.settings?.theme || 'blue';
+                            window.state.darkMode = data.settings?.darkMode || false;
+                            window.applyTheme();
+                            window.renderApp();
+                        } else {
+                            window.saveProfileToCloud(); // Simpan default
+                        }
+                    }, (e) => console.error(e));
+
+                    // Tarik Mata Kuliah & Tugas dari Cloud
+                    const coursesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'courses');
+                    onSnapshot(coursesRef, (querySnap) => {
+                        const loadedCourses = [];
+                        querySnap.forEach((d) => loadedCourses.push(d.data()));
+                        window.state.courses = loadedCourses;
+                        
+                        // Update status di halaman pengaturan jika sedang dibuka
+                        const statusEl = document.getElementById('cloud-status');
+                        if(statusEl) {
+                            statusEl.innerHTML = '<i class="ph-fill ph-cloud-check text-lg"></i> Tersinkronisasi dengan Cloud (Data Aman)';
+                            statusEl.className = 'text-xs font-bold text-green-600 dark:text-green-400 mb-4 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg';
+                        }
+                        
+                        // Hilangkan logo loading dan render UI
+                        const loader = document.getElementById('global-loader');
+                        if(loader) {
+                            loader.classList.add('opacity-0', 'pointer-events-none');
+                            setTimeout(() => loader.remove(), 300);
+                        }
+                        
+                        window.renderApp();
+                    }, (e) => console.error(e));
+                });
+            } catch (err) {
+                console.error("Cloud Error:", err);
+                const loader = document.getElementById('global-loader');
+                if(loader) loader.remove();
+            }
+        };
+
+        // Mulai proses cloud
+        initCloud();
     </script>
 
     <script>
