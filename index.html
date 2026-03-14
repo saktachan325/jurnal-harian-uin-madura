@@ -1,794 +1,937 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KuliahKu - Aplikasi Catatan Kuliah</title>
+    
+    <!-- Tailwind CSS with Custom Config for Dynamic Themes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: 'var(--p-50)', 100: 'var(--p-100)', 200: 'var(--p-200)',
+                            500: 'var(--p-500)', 600: 'var(--p-600)', 700: 'var(--p-700)',
+                            800: 'var(--p-800)', 900: 'var(--p-900)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        /* Theme Variables */
+        :root {
+            --p-50: #eff6ff; --p-100: #dbeafe; --p-200: #bfdbfe;
+            --p-500: #3b82f6; --p-600: #2563eb; --p-700: #1d4ed8;
+            --p-800: #1e40af; --p-900: #1e3a8a;
+        }
+        :root[data-theme="emerald"] {
+            --p-50: #ecfdf5; --p-100: #d1fae5; --p-200: #a7f3d0;
+            --p-500: #10b981; --p-600: #059669; --p-700: #047857;
+            --p-800: #065f46; --p-900: #064e3b;
+        }
+        :root[data-theme="violet"] {
+            --p-50: #f5f3ff; --p-100: #ede9fe; --p-200: #ddd6fe;
+            --p-500: #8b5cf6; --p-600: #7c3aed; --p-700: #6d28d9;
+            --p-800: #5b21b6; --p-900: #4c1d95;
+        }
+        :root[data-theme="rose"] {
+            --p-50: #fff1f2; --p-100: #ffe4e6; --p-200: #fecdd3;
+            --p-500: #f43f5e; --p-600: #e11d48; --p-700: #be123c;
+            --p-800: #9f1239; --p-900: #881337;
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-scaleIn { animation: scaleIn 0.2s ease-out forwards; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        input[type="radio"]:checked + span.custom-radio-text {
+            background-color: white; color: var(--p-600); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .dark input[type="radio"]:checked + span.custom-radio-text {
+            background-color: #334155; color: var(--p-500);
+        }
+        
+        /* Area aman untuk taskbar HP modern */
+        .safe-pb { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    </style>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
   
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Home, Book, User, Settings, Plus, Calendar, Clock, MapPin, 
-  FileText, CheckCircle, Circle, Users, UserRound, ChevronLeft,
-  GraduationCap, Bell, Search, Edit3, Trash2, CheckSquare, ListTodo,
-  AlertCircle
-} from 'lucide-react';
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 selection:bg-primary-200 selection:text-primary-900 pb-[90px] md:pb-0 transition-colors duration-300">
 
-// --- MOCK DATA AWAL ---
-const initialProfile = {
-  name: 'Mahasiswa Berprestasi',
-  university: 'Universitas Indonesia',
-  major: 'Sistem Informasi',
-  bio: 'Fokus belajar dan capai IPK 4.0!'
-};
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm transition-colors duration-300">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-primary-600 dark:text-primary-500 truncate mr-4">
+                <i class="ph-fill ph-graduation-cap text-3xl flex-shrink-0"></i>
+                <span class="text-lg md:text-xl font-extrabold tracking-tight truncate" id="app-header-title">KuliahKu</span>
+            </div>
+            
+            <nav class="hidden md:flex space-x-1" id="desktop-nav"></nav>
 
-const initialCourses = [
-  {
-    id: 'c1',
-    name: 'Pemrograman Web',
-    lecturer: 'Bpk. Budi Santoso, M.Kom.',
-    day: 'Senin',
-    time: '08:00 - 10:30',
-    room: 'Lab Komputer 1',
-    notes: [
-      { id: 'n1', title: 'Pengenalan React', content: 'React adalah library JS untuk membuat UI. Konsep utamanya adalah komponen dan state.', date: new Date().toISOString() }
-    ],
-    assignments: [
-      { 
-        id: 'a1', 
-        title: 'Membuat UI Sederhana', 
-        type: 'Praktikum', 
-        isGroup: false, 
-        members: '', 
-        dueDate: new Date(new Date().setHours(23, 59, 0, 0)).toISOString(), // Hari ini
-        isCompleted: false 
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    name: 'Rekayasa Perangkat Lunak',
-    lecturer: 'Ibu Siti Aminah, Ph.D.',
-    day: 'Selasa',
-    time: '13:00 - 15:30',
-    room: 'Ruang A.3.2',
-    notes: [],
-    assignments: [
-      { 
-        id: 'a2', 
-        title: 'Analisis Kebutuhan Sistem', 
-        type: 'Makalah', 
-        isGroup: true, 
-        members: 'Andi, Budi, Citra', 
-        dueDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Besok
-        isCompleted: false 
-      }
-    ]
-  }
-];
+            <div class="w-9 h-9 bg-gradient-to-tr from-primary-500 to-primary-400 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0 overflow-hidden" id="header-avatar">
+                M
+            </div>
+        </div>
+    </header>
 
-export default function App() {
-  // --- STATE MANAGEMENT ---
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, courses, profile, settings
-  const [activeCourseId, setActiveCourseId] = useState(null);
-  
-  const [profile, setProfile] = useState(initialProfile);
-  const [courses, setCourses] = useState(initialCourses);
-  
-  // Modal States
-  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+    <!-- Loading Overlay -->
+    <div id="global-loader" class="fixed inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity duration-300">
+        <i class="ph ph-spinner-gap animate-spin text-primary-500 text-5xl mb-4"></i>
+        <p class="font-bold text-slate-600 dark:text-slate-300">Menyinkronkan Data Cloud...</p>
+    </div>
 
-  // --- HELPER FUNCTIONS ---
-  const getActiveCourse = () => courses.find(c => c.id === activeCourseId);
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative min-h-[80vh]" id="main-content"></main>
 
-  const isToday = (dateString) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-  };
+    <!-- Mobile Bottom Taskbar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-around p-3 safe-pb shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-40 transition-colors duration-300" id="mobile-nav"></nav>
 
-  const isTomorrow = (dateString) => {
-    const date = new Date(dateString);
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return date.getDate() === tomorrow.getDate() && date.getMonth() === tomorrow.getMonth() && date.getFullYear() === tomorrow.getFullYear();
-  };
+    <!-- MODAL TAMBAH/EDIT MATA KULIAH -->
+    <div id="modal-course" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-all duration-300 transform border border-slate-100 dark:border-slate-700" id="modal-course-content">
+            <div class="bg-primary-600 dark:bg-primary-700 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg" id="modal-course-title">Tambah Mata Kuliah</h3>
+                <button onclick="window.closeModal('modal-course')" class="text-primary-200 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <form id="form-course" class="p-6 space-y-4">
+                <input type="hidden" id="course-edit-id" name="id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">NAMA MATA KULIAH</label>
+                    <input type="text" id="course-name" name="name" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary-500 outline-none transition-colors" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">NAMA DOSEN</label>
+                    <input type="text" id="course-lecturer" name="lecturer" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary-500 outline-none transition-colors" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">HARI</label>
+                        <select id="course-day" name="day" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary-500 outline-none transition-colors">
+                            <option value="Senin">Senin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option><option value="Kamis">Kamis</option><option value="Jumat">Jumat</option><option value="Sabtu">Sabtu</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">WAKTU</label>
+                        <input type="text" id="course-time" name="time" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary-500 outline-none transition-colors" placeholder="08:00 - 10:00" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">RUANGAN</label>
+                    <input type="text" id="course-room" name="room" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary-500 outline-none transition-colors" required>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="window.closeModal('modal-course')" class="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition-colors">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-  const formatDate = (dateString) => {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('id-ID', options);
-  };
+    <!-- MODAL TAMBAH/EDIT CATATAN (DIPERBESAR) -->
+    <div id="modal-note" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 md:p-8 opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <!-- max-w-2xl untuk memperlebar area form -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 transform border border-slate-100 dark:border-slate-700 my-8" id="modal-note-content">
+            <div class="bg-primary-600 dark:bg-primary-700 p-4 md:p-5 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2" id="modal-note-title"><i class="ph-fill ph-file-text"></i> Catatan</h3>
+                <button onclick="window.closeModal('modal-note')" class="text-primary-200 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <form id="form-note" class="p-6 md:p-8 space-y-4">
+                <input type="hidden" id="note-edit-id" name="id">
+                <div>
+                    <input type="text" id="note-title" name="title" class="w-full text-2xl font-extrabold border-b-2 border-slate-100 dark:border-slate-700 px-2 py-3 focus:border-primary-500 outline-none bg-transparent dark:text-white transition-colors" placeholder="Judul Catatan..." required>
+                </div>
+                <div>
+                    <!-- rows="15" dan min-h-[350px] untuk mempertinggi area catatan -->
+                    <textarea id="note-content" name="content" rows="15" class="w-full bg-yellow-50/50 dark:bg-slate-700/50 border border-yellow-100 dark:border-slate-600 rounded-2xl p-5 md:p-6 focus:ring-2 focus:ring-primary-300 outline-none text-slate-700 dark:text-slate-200 resize-y leading-relaxed text-base md:text-lg min-h-[350px] transition-colors" placeholder="Mulai menulis detail catatan kuliahmu di sini..." required></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="window.closeModal('modal-note')" class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition-colors">Simpan Catatan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-  // --- DERIVED STATE (DASHBOARD) ---
-  const allAssignments = useMemo(() => {
-    return courses.flatMap(course => 
-      course.assignments.map(assign => ({ ...assign, courseName: course.name, courseId: course.id }))
-    ).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-  }, [courses]);
+    <!-- MODAL TAMBAH/EDIT TUGAS -->
+    <div id="modal-assignment" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300 transform my-8 border border-slate-100 dark:border-slate-700" id="modal-assignment-content">
+            <div class="bg-gradient-to-r from-primary-700 to-primary-500 p-5 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2" id="modal-assign-title"><i class="ph ph-list-checks text-xl"></i> Tugas Baru</h3>
+                <button onclick="window.closeModal('modal-assignment')" class="text-primary-200 hover:text-white bg-white/10 p-1 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+            </div>
+            <form id="form-assignment" class="p-6 space-y-5">
+                <input type="hidden" id="assign-edit-id" name="id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">JUDUL TUGAS</label>
+                    <input type="text" id="assign-title" name="title" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none transition-colors" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">JENIS TUGAS</label>
+                        <select id="assign-type" name="type" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none transition-colors">
+                            <option value="Makalah">Makalah</option> <option value="Artikel">Artikel</option> <option value="PPT">Presentasi (PPT)</option>
+                            <option value="Review Jurnal">Review Jurnal</option> <option value="Projek">Projek Codding</option> <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">WAKTU TUGAS</label>
+                        <input type="datetime-local" id="assign-date" name="dueDate" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none text-sm transition-colors" required>
+                    </div>
+                </div>
 
-  const pendingAssignments = allAssignments.filter(a => !a.isCompleted);
-  const todayAssignments = pendingAssignments.filter(a => isToday(a.dueDate));
-  const tomorrowAssignments = pendingAssignments.filter(a => isTomorrow(a.dueDate));
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">SIFAT TUGAS</label>
+                    <div class="flex gap-4 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
+                        <label class="flex-1 relative text-center cursor-pointer">
+                            <input type="radio" id="assign-indiv" name="isGroup" value="false" class="peer hidden" checked onchange="window.toggleGroupMembers(false)">
+                            <span class="custom-radio-text block py-2 rounded-lg text-sm font-bold text-slate-400 peer-checked:text-primary-600 transition-all">Individu</span>
+                        </label>
+                        <label class="flex-1 relative text-center cursor-pointer">
+                            <input type="radio" id="assign-group" name="isGroup" value="true" class="peer hidden" onchange="window.toggleGroupMembers(true)">
+                            <span class="custom-radio-text block py-2 rounded-lg text-sm font-bold text-slate-400 peer-checked:text-primary-600 transition-all">Kelompok</span>
+                        </label>
+                    </div>
+                </div>
 
-  // --- HANDLERS ---
-  const handleAddCourse = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newCourse = {
-      id: Date.now().toString(),
-      name: formData.get('name'),
-      lecturer: formData.get('lecturer'),
-      day: formData.get('day'),
-      time: formData.get('time'),
-      room: formData.get('room'),
-      notes: [],
-      assignments: []
-    };
-    setCourses([...courses, newCourse]);
-    setIsCourseModalOpen(false);
-  };
+                <div id="group-members-container" class="hidden animate-fadeIn">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">NAMA ANGGOTA KELOMPOK</label>
+                    <textarea id="assign-members" name="members" rows="2" class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none text-sm placeholder:text-slate-400 transition-colors" placeholder="Pisahkan dengan koma"></textarea>
+                </div>
 
-  const handleAddNote = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const newNote = {
-      id: Date.now().toString(),
-      title: formData.get('title'),
-      content: formData.get('content'),
-      date: new Date().toISOString()
-    };
-    setCourses(courses.map(c => c.id === activeCourseId ? { ...c, notes: [newNote, ...c.notes] } : c));
-    setIsNoteModalOpen(false);
-  };
+                <div class="flex gap-3 pt-2 mt-6">
+                    <button type="button" onclick="window.closeModal('modal-assignment')" class="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
+                    <button type="submit" class="flex-[2] px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/30 transition-all">Simpan Tugas</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-  const handleAddAssignment = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const isGroup = formData.get('isGroup') === 'true';
-    const newAssignment = {
-      id: Date.now().toString(),
-      title: formData.get('title'),
-      type: formData.get('type'),
-      isGroup: isGroup,
-      members: isGroup ? formData.get('members') : '',
-      dueDate: formData.get('dueDate'),
-      isCompleted: false
-    };
-    setCourses(courses.map(c => c.id === activeCourseId ? { ...c, assignments: [...c.assignments, newAssignment].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)) } : c));
-    setIsAssignmentModalOpen(false);
-  };
+    <!-- MAIN SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  const toggleAssignmentStatus = (courseId, assignmentId) => {
-    setCourses(courses.map(c => {
-      if (c.id === courseId) {
-        return {
-          ...c,
-          assignments: c.assignments.map(a => a.id === assignmentId ? { ...a, isCompleted: !a.isCompleted } : a)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuliahku-app';
+        let db, auth, currentUser;
+        let isDataLoaded = false;
+
+        // State Utama Aplikasi
+        window.state = {
+            activeTab: 'dashboard',
+            activeCourseId: null,
+            detailTab: 'notes',
+            theme: 'blue',
+            darkMode: false,
+            profile: {
+                name: 'Mahasiswa Hebat',
+                nim: '2109876543',
+                university: 'Universitas Indonesia',
+                major: 'Sistem Informasi',
+                bio: 'Fokus belajar dan raih mimpimu!',
+                avatarUrl: ''
+            },
+            courses: []
         };
-      }
-      return c;
-    }));
-  };
 
-  const handleUpdateProfile = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    setProfile({
-      name: formData.get('name'),
-      university: formData.get('university'),
-      major: formData.get('major'),
-      bio: formData.get('bio'),
-    });
-    alert('Profil berhasil diperbarui!');
-  };
-
-  // --- RENDERERS ---
-
-  const renderDashboard = () => (
-    <div className="space-y-6 animate-fadeIn pb-24">
-      {/* Header Greeting */}
-      <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-3xl p-6 text-white shadow-lg shadow-blue-500/30">
-        <h2 className="text-3xl font-bold mb-2">Halo, {profile.name.split(' ')[0]}! 👋</h2>
-        <p className="text-blue-100 opacity-90">Tetap semangat, mari selesaikan tugas-tugasmu hari ini.</p>
+        const hariIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const getTodayName = () => hariIndo[new Date().getDay()];
+        const getTomorrowName = () => hariIndo[new Date(new Date().setDate(new Date().getDate() + 1)).getDay()];
         
-        <div className="mt-6 grid grid-cols-3 gap-4">
-          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-            <div className="text-3xl font-bold mb-1">{pendingAssignments.length}</div>
-            <div className="text-xs text-blue-100 uppercase tracking-wider">Tugas Aktif</div>
-          </div>
-          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-            <div className="text-3xl font-bold mb-1">{todayAssignments.length}</div>
-            <div className="text-xs text-blue-100 uppercase tracking-wider">Hari Ini</div>
-          </div>
-          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
-            <div className="text-3xl font-bold mb-1">{tomorrowAssignments.length}</div>
-            <div className="text-xs text-blue-100 uppercase tracking-wider">Besok</div>
-          </div>
-        </div>
-      </div>
+        window.isToday = (d) => new Date(d).toDateString() === new Date().toDateString();
+        window.isTomorrow = (d) => {
+            const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+            return new Date(d).toDateString() === tmrw.toDateString();
+        };
+        window.formatDate = (dateString, includeTime = true) => {
+            const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            if(includeTime) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
+            return new Date(dateString).toLocaleDateString('id-ID', opts);
+        };
+        window.generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 5);
 
-      {/* Notifications Section */}
-      <div>
-        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Bell className="text-blue-600" size={24}/>
-          Notifikasi Tugas
-        </h3>
+        // ================= INIT FIREBASE (Cloud Sync) =================
+        if (typeof __firebase_config !== 'undefined') {
+            const app = initializeApp(JSON.parse(__firebase_config));
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            initAuth();
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    setupCloudListeners();
+                }
+            });
+        } else {
+            // Fallback render jika cloud gagal/tidak didukung
+            checkAndHideLoader();
+        }
+
+        function setupCloudListeners() {
+            // Dengarkan Profile
+            const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profileSettings');
+            onSnapshot(profileRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    window.state.profile = data.profile || window.state.profile;
+                    window.state.theme = data.settings?.theme || 'blue';
+                    window.state.darkMode = data.settings?.darkMode || false;
+                } else { saveProfileToCloud(); }
+                applyTheme();
+                checkAndHideLoader();
+            }, (err) => console.error(err));
+
+            // Dengarkan Courses (Mata Kuliah + Tugas + Catatan)
+            const coursesRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'courses');
+            onSnapshot(coursesRef, (querySnap) => {
+                const loadedCourses = [];
+                querySnap.forEach((d) => loadedCourses.push(d.data()));
+                window.state.courses = loadedCourses;
+                checkAndHideLoader();
+            }, (err) => console.error(err));
+        }
+
+        function checkAndHideLoader() {
+            if(!isDataLoaded) {
+                isDataLoaded = true;
+                const loader = document.getElementById('global-loader');
+                if(loader) {
+                    loader.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => loader.classList.add('hidden'), 300);
+                }
+            }
+            // MENGHINDARI BUG TASKBAR HILANG: Harus dipanggil secara eksplisit setiap render
+            window.renderNavUI();
+            window.renderApp();
+        }
+
+        // ================= CLOUD WRITERS =================
+        async function saveProfileToCloud() {
+            if(!currentUser || !db) return;
+            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'profileSettings'), {
+                profile: window.state.profile,
+                settings: { theme: window.state.theme, darkMode: window.state.darkMode }
+            });
+        }
+        async function saveCourseToCloud(courseObj) {
+            if(!currentUser || !db) return;
+            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'courses', courseObj.id), courseObj);
+        }
+
+        // ================= UI & THEME ENGINE =================
+        function applyTheme() {
+            document.documentElement.setAttribute('data-theme', window.state.theme);
+            if(window.state.darkMode) { document.documentElement.classList.add('dark'); } 
+            else { document.documentElement.classList.remove('dark'); }
+        }
         
-        {pendingAssignments.length === 0 ? (
-          <div className="bg-blue-50 rounded-2xl p-8 text-center border border-blue-100">
-            <CheckSquare className="mx-auto text-blue-300 mb-3" size={48} />
-            <p className="text-slate-600 font-medium">Hore! Tidak ada tugas yang tertunda.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {todayAssignments.length > 0 && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-2xl shadow-sm">
-                <h4 className="font-bold text-red-700 flex items-center gap-2 mb-2">
-                  <AlertCircle size={18}/> Tenggat Waktu Hari Ini!
-                </h4>
-                {todayAssignments.map(a => (
-                  <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl mt-2 shadow-sm border border-red-100">
+        window.changeTheme = (color) => {
+            window.state.theme = color; applyTheme(); window.renderApp(); saveProfileToCloud();
+        };
+
+        window.toggleDarkMode = () => {
+            window.state.darkMode = !window.state.darkMode; applyTheme(); window.renderApp(); saveProfileToCloud();
+        };
+
+        // ================= ROUTING & RENDERING =================
+        window.navigateTo = (tab, courseId = null) => {
+            window.state.activeTab = tab;
+            if (courseId) { window.state.activeCourseId = courseId; window.state.detailTab = 'notes'; }
+            window.renderNavUI(); window.renderApp();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.renderNavUI = () => {
+            const tabs = [
+                { id: 'dashboard', icon: 'ph-house', label: 'Beranda' },
+                { id: 'courses', icon: 'ph-books', label: 'Kuliah' },
+                { id: 'profile', icon: 'ph-user', label: 'Profil' },
+                { id: 'settings', icon: 'ph-gear', label: 'Pengaturan' }
+            ];
+            
+            const renderDesktopBtn = (t) => {
+                const isAct = t.id === window.state.activeTab || (t.id === 'courses' && window.state.activeTab === 'courseDetail');
+                const cls = isAct ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800';
+                return `<button onclick="window.navigateTo('${t.id}')" class="px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${cls}"><i class="ph ${t.icon} text-lg"></i> ${t.label}</button>`;
+            };
+
+            const renderMobileBtn = (t) => {
+                const isAct = t.id === window.state.activeTab || (t.id === 'courses' && window.state.activeTab === 'courseDetail');
+                const cls = isAct ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30' : 'text-slate-400 dark:text-slate-500 hover:text-primary-500';
+                return `<button onclick="window.navigateTo('${t.id}')" class="flex flex-col items-center p-2 rounded-xl w-16 transition-colors ${cls}"><i class="${isAct?'ph-fill':'ph'} ${t.icon} text-2xl mb-1"></i><span class="text-[10px] font-bold">${t.label}</span></button>`;
+            };
+
+            document.getElementById('desktop-nav').innerHTML = tabs.map(renderDesktopBtn).join('');
+            document.getElementById('mobile-nav').innerHTML = tabs.map(renderMobileBtn).join('');
+        };
+
+        window.renderApp = () => {
+            const fname = window.state.profile.name.split(' ')[0] || 'Aplikasi';
+            document.getElementById('app-header-title').innerText = `Aplikasi ${fname}`;
+            
+            const avatarEl = document.getElementById('header-avatar');
+            if(window.state.profile.avatarUrl) {
+                avatarEl.innerHTML = `<img src="${window.state.profile.avatarUrl}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentNode.innerHTML='${fname.charAt(0).toUpperCase()}';">`;
+            } else {
+                avatarEl.innerHTML = fname.charAt(0).toUpperCase();
+            }
+
+            const mc = document.getElementById('main-content');
+            let html = '';
+            switch(window.state.activeTab) {
+                case 'dashboard': html = renderDashboard(); break;
+                case 'courses': html = renderCourses(); break;
+                case 'courseDetail': html = renderCourseDetail(); break;
+                case 'profile': html = renderProfile(); break;
+                case 'settings': html = renderSettings(); break;
+            }
+            mc.innerHTML = html;
+        };
+
+        function renderDashboard() {
+            let allTasks = [];
+            window.state.courses.forEach(c => {
+                c.assignments.forEach(a => allTasks.push({ ...a, courseName: c.name, courseId: c.id }));
+            });
+            allTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            const pending = allTasks.filter(a => !a.isCompleted);
+            const todayTasks = pending.filter(a => window.isToday(a.dueDate));
+            const tomorrowTasks = pending.filter(a => window.isTomorrow(a.dueDate));
+            const futureTasks = pending.filter(a => !window.isToday(a.dueDate) && !window.isTomorrow(a.dueDate));
+
+            const coursesToday = window.state.courses.filter(c => c.day === getTodayName());
+            const coursesTomorrow = window.state.courses.filter(c => c.day === getTomorrowName());
+
+            let scheduleHtml = '';
+            const renderCard = (c, badgeText, bCol) => `
+                <div onclick="window.navigateTo('courseDetail', '${c.id}')" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-2xl flex-shrink-0 w-64 md:w-72 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold px-2 py-1 rounded-md bg-${bCol}-100 text-${bCol}-700 dark:bg-${bCol}-900/30 dark:text-${bCol}-400 uppercase tracking-wider">${badgeText}</span>
+                        <i class="ph-fill ph-book-bookmark text-primary-500 text-xl"></i>
+                    </div>
+                    <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1 truncate">${c.name}</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 truncate"><i class="ph ph-user-circle"></i> ${c.lecturer}</p>
+                    <div class="flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span><i class="ph ph-clock text-primary-500"></i> ${c.time}</span>
+                        <span class="truncate"><i class="ph ph-map-pin text-primary-500"></i> ${c.room}</span>
+                    </div>
+                </div>`;
+
+            if (!coursesToday.length && !coursesTomorrow.length) {
+                scheduleHtml = `<p class="text-sm text-slate-500 italic py-2">Tidak ada jadwal kuliah untuk hari ini dan besok. Bersantai sejenak! 🌴</p>`;
+            } else {
+                let cards = [];
+                coursesToday.forEach(c => cards.push(renderCard(c, 'Hari Ini', 'primary')));
+                coursesTomorrow.forEach(c => cards.push(renderCard(c, 'Besok', 'slate')));
+                scheduleHtml = `<div class="flex overflow-x-auto gap-4 pb-4 pt-2 no-scrollbar">${cards.join('')}</div>`;
+            }
+
+            let notifHtml = '';
+            if(!pending.length) {
+                notifHtml = `<div class="bg-primary-50 dark:bg-primary-900/20 rounded-2xl p-8 text-center border border-primary-100 dark:border-primary-800">
+                                <i class="ph ph-check-square mx-auto text-primary-300 dark:text-primary-600 mb-3 text-5xl"></i>
+                                <p class="text-slate-600 dark:text-slate-300 font-medium">Luar biasa! Tidak ada tugas yang tertunda.</p>
+                             </div>`;
+            } else {
+                if(todayTasks.length) {
+                    notifHtml += `<div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-2xl shadow-sm mb-4">
+                        <h4 class="font-bold text-red-700 dark:text-red-400 flex items-center gap-2 mb-2"><i class="ph-fill ph-warning-circle"></i> Waktu Tugas Hari Ini!</h4>
+                        ${todayTasks.map(a => `
+                            <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl mt-2 shadow-sm border border-red-100 dark:border-red-900/50">
+                                <div>
+                                    <p class="font-semibold text-slate-800 dark:text-slate-100">${a.title}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${a.courseName} • ${a.type}</p>
+                                </div>
+                                <button onclick="window.toggleAssignmentStatus('${a.courseId}', '${a.id}')" class="text-red-500 hover:text-red-700"><i class="ph ph-circle text-2xl"></i></button>
+                            </div>
+                        `).join('')}</div>`;
+                }
+                if(tomorrowTasks.length) {
+                    notifHtml += `<div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 p-4 rounded-r-2xl shadow-sm mb-4">
+                        <h4 class="font-bold text-orange-700 dark:text-orange-400 flex items-center gap-2 mb-2"><i class="ph-fill ph-clock"></i> Waktu Tugas Besok</h4>
+                        ${tomorrowTasks.map(a => `
+                            <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-xl mt-2 shadow-sm border border-orange-100 dark:border-orange-900/50">
+                                <div>
+                                    <p class="font-semibold text-slate-800 dark:text-slate-100">${a.title}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${a.courseName} • ${a.type}</p>
+                                </div>
+                                <button onclick="window.toggleAssignmentStatus('${a.courseId}', '${a.id}')" class="text-orange-500 hover:text-orange-700"><i class="ph ph-circle text-2xl"></i></button>
+                            </div>
+                        `).join('')}</div>`;
+                }
+                notifHtml += `<div class="bg-primary-50 dark:bg-slate-800 rounded-2xl p-4 border border-primary-100 dark:border-slate-700">
+                    <h4 class="font-bold text-primary-800 dark:text-primary-400 flex items-center gap-2 mb-3"><i class="ph-fill ph-list-checks"></i> Tugas Mendatang</h4>
+                    <div class="space-y-2">
+                        ${futureTasks.slice(0, 5).map(a => `
+                            <div class="flex justify-between items-center bg-white dark:bg-slate-700 p-3 rounded-xl shadow-sm border border-primary-50 dark:border-slate-600">
+                                <div>
+                                    <p class="font-semibold text-slate-800 dark:text-slate-100">${a.title}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">${a.courseName} • ${new Date(a.dueDate).toLocaleDateString('id-ID')}</p>
+                                </div>
+                                <button onclick="window.toggleAssignmentStatus('${a.courseId}', '${a.id}')" class="text-primary-400 hover:text-primary-600"><i class="ph ph-circle text-2xl"></i></button>
+                            </div>
+                        `).join('')}
+                        ${!futureTasks.length ? '<p class="text-sm text-primary-600/70 dark:text-slate-400 text-center py-2">Tidak ada tugas lain dalam waktu dekat.</p>' : ''}
+                    </div></div>`;
+            }
+
+            return `
+                <div class="space-y-8 animate-fadeIn pb-10">
+                    <div class="bg-gradient-to-br from-primary-700 to-primary-500 rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-primary-500/30 relative overflow-hidden">
+                        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                        <h2 class="text-3xl font-bold mb-2 relative z-10">Halo, ${window.state.profile.name.split(' ')[0]}! 👋</h2>
+                        <p class="text-primary-100 opacity-90 relative z-10 text-sm md:text-base">Tetap semangat capai target belajarmu hari ini.</p>
+                        <div class="mt-6 grid grid-cols-3 gap-3 md:gap-4 relative z-10">
+                            <div class="bg-white/20 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10">
+                                <div class="text-2xl md:text-3xl font-bold mb-1">${pending.length}</div>
+                                <div class="text-[10px] md:text-xs text-primary-50 uppercase font-bold tracking-wider">Tugas Aktif</div>
+                            </div>
+                            <div class="bg-white/20 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10">
+                                <div class="text-2xl md:text-3xl font-bold mb-1">${todayTasks.length}</div>
+                                <div class="text-[10px] md:text-xs text-primary-50 uppercase font-bold tracking-wider">Hari Ini</div>
+                            </div>
+                            <div class="bg-white/20 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10">
+                                <div class="text-2xl md:text-3xl font-bold mb-1">${tomorrowTasks.length}</div>
+                                <div class="text-[10px] md:text-xs text-primary-50 uppercase font-bold tracking-wider">Besok</div>
+                            </div>
+                        </div>
+                    </div>
                     <div>
-                      <p className="font-semibold text-slate-800">{a.title}</p>
-                      <p className="text-xs text-slate-500">{a.courseName} • {a.type}</p>
+                        <div class="flex justify-between items-end mb-4">
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><i class="ph-fill ph-calendar-check text-primary-600 dark:text-primary-500 text-2xl"></i> Jadwal Kuliah</h3>
+                            <button onclick="window.navigateTo('courses')" class="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline">Lihat Semua</button>
+                        </div>
+                        ${scheduleHtml}
                     </div>
-                    <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-red-500 hover:text-red-700">
-                      <Circle size={24} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tomorrowAssignments.length > 0 && (
-              <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-2xl shadow-sm">
-                <h4 className="font-bold text-orange-700 flex items-center gap-2 mb-2">
-                  <Clock size={18}/> Tenggat Waktu Besok
-                </h4>
-                {tomorrowAssignments.map(a => (
-                  <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl mt-2 shadow-sm border border-orange-100">
                     <div>
-                      <p className="font-semibold text-slate-800">{a.title}</p>
-                      <p className="text-xs text-slate-500">{a.courseName} • {a.type}</p>
+                        <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2"><i class="ph-fill ph-bell-ringing text-primary-600 dark:text-primary-500 text-2xl"></i> Notifikasi Tugas</h3>
+                        ${notifHtml}
                     </div>
-                    <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-orange-500 hover:text-orange-700">
-                      <Circle size={24} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Other Pending Assignments */}
-            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-               <h4 className="font-bold text-blue-800 flex items-center gap-2 mb-3">
-                  <ListTodo size={18}/> Tugas Mendatang
-                </h4>
-                <div className="space-y-2">
-                {pendingAssignments.filter(a => !isToday(a.dueDate) && !isTomorrow(a.dueDate)).slice(0, 5).map(a => (
-                   <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-blue-50">
-                   <div>
-                     <p className="font-semibold text-slate-800">{a.title}</p>
-                     <p className="text-xs text-slate-500">{a.courseName} • {new Date(a.dueDate).toLocaleDateString('id-ID')}</p>
-                   </div>
-                   <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-blue-400 hover:text-blue-600">
-                     <Circle size={24} />
-                   </button>
-                 </div>
-                ))}
-                {pendingAssignments.filter(a => !isToday(a.dueDate) && !isTomorrow(a.dueDate)).length === 0 && (
-                  <p className="text-sm text-blue-600/70 text-center py-2">Tidak ada tugas lain dalam waktu dekat.</p>
-                )}
                 </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            `;
+        }
 
-  const renderCourses = () => (
-    <div className="space-y-6 animate-fadeIn pb-24">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">Mata Kuliah</h2>
-        <button 
-          onClick={() => setIsCourseModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white p-2 md:px-4 md:py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all"
-        >
-          <Plus size={20} /> <span className="hidden md:inline">Tambah</span>
-        </button>
-      </div>
+        function renderCourses() {
+            let cards = window.state.courses.map(course => {
+                const pendTasks = course.assignments.filter(a => !a.isCompleted).length;
+                return `
+                    <div onclick="window.navigateTo('courseDetail', '${course.id}')" class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-primary-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-primary-500/10 transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                            <i class="ph-fill ph-books text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 truncate">${course.name}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2 truncate"><i class="ph ph-user-circle"></i> ${course.lecturer}</p>
+                        <div class="flex flex-col gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-xl border border-slate-100 dark:border-slate-600/50">
+                            <div class="flex items-center gap-2"><i class="ph-fill ph-calendar-blank text-primary-500"></i> ${course.day}, ${course.time}</div>
+                            <div class="flex items-center gap-2 truncate"><i class="ph-fill ph-map-pin text-primary-500"></i> ${course.room}</div>
+                        </div>
+                        <div class="mt-4 flex gap-2 flex-wrap">
+                            <span class="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs px-2 py-1 rounded-md font-semibold">${course.notes.length} Catatan</span>
+                            <span class="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs px-2 py-1 rounded-md font-semibold">${pendTasks} Waktu Tugas Aktif</span>
+                        </div>
+                    </div>`;
+            }).join('');
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {courses.map(course => (
-          <div 
-            key={course.id} 
-            onClick={() => { setActiveCourseId(course.id); setActiveTab('courseDetail'); }}
-            className="bg-white p-5 rounded-3xl border border-blue-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all cursor-pointer group"
-          >
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <Book size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-1">{course.name}</h3>
-            <p className="text-sm text-slate-500 mb-4 flex items-center gap-2"><UserRound size={14}/> {course.lecturer}</p>
-            
-            <div className="flex flex-col gap-2 text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-2"><Calendar size={14} className="text-blue-500"/> {course.day}, {course.time}</div>
-              <div className="flex items-center gap-2"><MapPin size={14} className="text-blue-500"/> {course.room}</div>
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <span className="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full font-semibold border border-blue-100">
-                {course.notes.length} Catatan
-              </span>
-              <span className="bg-orange-50 text-orange-700 text-xs px-3 py-1 rounded-full font-semibold border border-orange-100">
-                {course.assignments.filter(a => !a.isCompleted).length} Tugas Aktif
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderCourseDetail = () => {
-    const course = getActiveCourse();
-    if (!course) return null;
-
-    // Sub-tab state for detail view
-    const [detailTab, setDetailTab] = useState('notes'); // notes, assignments
-
-    return (
-      <div className="space-y-6 animate-fadeIn pb-24">
-        {/* Header Back Button & Course Info */}
-        <div>
-          <button 
-            onClick={() => setActiveTab('courses')}
-            className="text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-4 font-medium transition-colors"
-          >
-            <ChevronLeft size={20} /> Kembali ke Mata Kuliah
-          </button>
-          
-          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden">
-             {/* Decorative circle */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-            
-            <h2 className="text-3xl font-bold mb-2 relative z-10">{course.name}</h2>
-            <p className="text-blue-200 flex items-center gap-2 mb-4 relative z-10"><UserRound size={16}/> {course.lecturer}</p>
-            
-            <div className="flex flex-wrap gap-4 text-sm font-medium bg-white/10 p-3 rounded-2xl w-fit backdrop-blur-sm relative z-10 border border-white/10">
-              <div className="flex items-center gap-2"><Calendar size={16}/> {course.day}, {course.time}</div>
-              <div className="flex items-center gap-2"><MapPin size={16}/> {course.room}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs for Notes & Assignments */}
-        <div className="flex bg-slate-100 p-1 rounded-2xl max-w-md mx-auto">
-          <button 
-            onClick={() => setDetailTab('notes')}
-            className={`flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${detailTab === 'notes' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <FileText size={18}/> Catatan Materi
-          </button>
-          <button 
-            onClick={() => setDetailTab('assignments')}
-            className={`flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${detailTab === 'assignments' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <ListTodo size={18}/> Tugas Kuliah
-          </button>
-        </div>
-
-        {/* --- NOTES SECTION --- */}
-        {detailTab === 'notes' && (
-          <div className="space-y-4 animate-fadeIn">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold text-slate-800">Riwayat Catatan</h3>
-              <button onClick={() => setIsNoteModalOpen(true)} className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors">
-                <Plus size={16}/> Buat Catatan
-              </button>
-            </div>
-            
-            {course.notes.length === 0 ? (
-              <div className="text-center py-10 bg-white border border-dashed border-slate-300 rounded-3xl">
-                <FileText className="mx-auto text-slate-300 mb-2" size={48} />
-                <p className="text-slate-500">Belum ada catatan untuk mata kuliah ini.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {course.notes.map(note => (
-                  <div key={note.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <h4 className="font-bold text-lg text-slate-800 mb-1">{note.title}</h4>
-                    <p className="text-xs text-slate-400 mb-3">{new Date(note.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* --- ASSIGNMENTS SECTION --- */}
-        {detailTab === 'assignments' && (
-          <div className="space-y-4 animate-fadeIn">
-             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold text-slate-800">Daftar Tugas</h3>
-              <button onClick={() => setIsAssignmentModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20">
-                <Plus size={16}/> Tambah Tugas
-              </button>
-            </div>
-
-            {course.assignments.length === 0 ? (
-               <div className="text-center py-10 bg-white border border-dashed border-slate-300 rounded-3xl">
-               <ListTodo className="mx-auto text-slate-300 mb-2" size={48} />
-               <p className="text-slate-500">Yey! Belum ada tugas yang diberikan.</p>
-             </div>
-            ) : (
-              <div className="space-y-3">
-                {course.assignments.map(assign => (
-                  <div key={assign.id} className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center ${assign.isCompleted ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-blue-100 shadow-sm hover:shadow-md'}`}>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-md ${assign.isCompleted ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700'}`}>
-                          {assign.type}
-                        </span>
-                        {assign.isGroup ? (
-                           <span className="text-xs font-bold px-2 py-1 rounded-md bg-purple-100 text-purple-700 flex items-center gap-1">
-                             <Users size={12}/> Kelompok
-                           </span>
-                        ) : (
-                           <span className="text-xs font-bold px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 flex items-center gap-1">
-                             <User size={12}/> Individu
-                           </span>
-                        )}
-                        {isToday(assign.dueDate) && !assign.isCompleted && <span className="text-xs font-bold px-2 py-1 rounded-md bg-red-100 text-red-600 animate-pulse">Hari Ini!</span>}
-                      </div>
-                      
-                      <h4 className={`font-bold text-lg ${assign.isCompleted ? 'line-through text-slate-500' : 'text-slate-800'}`}>{assign.title}</h4>
-                      
-                      <div className="text-sm text-slate-500 mt-2 flex flex-col gap-1">
-                        <span className="flex items-center gap-2"><Calendar size={14}/> Tenggat: <span className={isToday(assign.dueDate) && !assign.isCompleted ? 'text-red-500 font-semibold' : ''}>{formatDate(assign.dueDate)}</span></span>
-                        {assign.isGroup && <span className="flex items-center gap-2"><Users size={14}/> Anggota: {assign.members}</span>}
-                      </div>
+            return `
+                <div class="space-y-6 animate-fadeIn pb-10">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">Mata Kuliah</h2>
+                        <button onclick="window.openCourseModal()" class="bg-primary-600 hover:bg-primary-700 text-white p-2 md:px-4 md:py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-primary-500/30 transition-all">
+                            <i class="ph ph-plus text-xl"></i> <span class="hidden md:inline">Tambah</span>
+                        </button>
                     </div>
+                    ${!window.state.courses.length ? `<div class="bg-white dark:bg-slate-800 border-dashed border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-10 text-center text-slate-500 dark:text-slate-400"><i class="ph ph-books text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p>Belum ada mata kuliah. Yuk, tambahkan jadwal kuliahmu!</p></div>` : `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${cards}</div>`}
+                </div>`;
+        }
 
-                    <button 
-                      onClick={() => toggleAssignmentStatus(course.id, assign.id)}
-                      className={`p-3 rounded-xl transition-colors flex-shrink-0 ${assign.isCompleted ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                    >
-                      {assign.isCompleted ? <CheckCircle size={28} /> : <Circle size={28} />}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+        window.switchDetailTab = (tab) => { window.state.detailTab = tab; window.renderApp(); };
 
-  const renderProfile = () => (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-24">
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">Profil Mahasiswa</h2>
-      
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100">
-        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start mb-8">
-          <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-400 p-1 shadow-xl shadow-blue-500/20">
-            <div className="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden">
-               {/* Placeholder Avatar */}
-               <GraduationCap className="text-blue-500 w-16 h-16" />
-            </div>
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h3 className="text-2xl font-bold text-slate-800">{profile.name}</h3>
-            <p className="text-blue-600 font-medium text-lg">{profile.major}</p>
-            <p className="text-slate-500 mb-4">{profile.university}</p>
-            <p className="text-sm bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-slate-600">"{profile.bio}"</p>
-          </div>
-        </div>
+        function renderCourseDetail() {
+            const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
+            if (!course) return '';
 
-        <form onSubmit={handleUpdateProfile} className="space-y-4 pt-6 border-t border-slate-100">
-          <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Edit3 size={18}/> Edit Profil</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Nama Lengkap</label>
-              <input type="text" name="name" defaultValue={profile.name} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Universitas</label>
-              <input type="text" name="university" defaultValue={profile.university} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Program Studi</label>
-              <input type="text" name="major" defaultValue={profile.major} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Bio / Motto</label>
-              <textarea name="bio" defaultValue={profile.bio} rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"></textarea>
-            </div>
-          </div>
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-4 shadow-lg shadow-blue-500/30 transition-all">
-            Simpan Perubahan
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+            let tabContent = '';
+            if (window.state.detailTab === 'notes') {
+                let notesHtml = !course.notes.length 
+                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-file-text text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p class="text-slate-500">Belum ada catatan di mata kuliah ini.</p></div>`
+                    : `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${course.notes.map(note => `
+                            <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-primary-500"></div>
+                                <button onclick="window.openNoteModal('${note.id}')" class="absolute top-4 right-4 text-slate-400 hover:text-primary-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 p-2"><i class="ph-fill ph-pencil-simple text-xl"></i></button>
+                                <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1 pr-6">${note.title}</h4>
+                                <p class="text-xs text-slate-400 mb-3 font-medium">${window.formatDate(note.date, false)}</p>
+                                <p class="text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">${note.content}</p>
+                            </div>
+                        `).join('')}</div>`;
 
-  const renderSettings = () => (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-24">
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">Pengaturan Aplikasi</h2>
-      
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
-        
-        {/* Dummy Setting 1 */}
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <div>
-            <h4 className="font-bold text-slate-800">Notifikasi Pengingat Tugas</h4>
-            <p className="text-xs text-slate-500">Menerima peringatan H-1 sebelum tenggat waktu.</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" defaultChecked className="sr-only peer" />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
+                tabContent = `<div class="space-y-4 animate-fadeIn">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">Catatan Kuliah</h3>
+                            <button onclick="window.openNoteModal()" class="bg-primary-100 dark:bg-primary-900/40 hover:bg-primary-200 text-primary-700 dark:text-primary-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors"><i class="ph ph-plus"></i> Buat Catatan</button>
+                        </div>${notesHtml}</div>`;
+            } else {
+                let assignHtml = !course.assignments.length
+                    ? `<div class="text-center py-10 bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-3xl"><i class="ph ph-list-checks text-5xl mb-3 text-slate-300 dark:text-slate-600"></i><p class="text-slate-500">Yey! Belum ada tugas yang diberikan.</p></div>`
+                    : `<div class="space-y-3">
+                        ${course.assignments.map(assign => `
+                            <div class="p-5 rounded-3xl border transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative group ${assign.isCompleted ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' : 'bg-white dark:bg-slate-800 border-primary-100 dark:border-slate-600 shadow-sm'}">
+                                <button onclick="window.openAssignModal('${assign.id}')" class="absolute top-4 right-4 md:right-16 text-slate-400 hover:text-primary-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 z-10 bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm md:shadow-none"><i class="ph-fill ph-pencil-simple text-xl"></i></button>
+                                <div class="flex-1">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <span class="text-[10px] font-bold px-2 py-1 rounded-md ${assign.isCompleted ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300' : 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300'}">${assign.type}</span>
+                                        ${assign.isGroup ? `<span class="text-[10px] font-bold px-2 py-1 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 flex items-center gap-1">Kelompok</span>` : `<span class="text-[10px] font-bold px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 flex items-center gap-1">Individu</span>`}
+                                        ${window.isToday(assign.dueDate) && !assign.isCompleted ? `<span class="text-[10px] font-bold px-2 py-1 rounded-md bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 animate-pulse">Waktu Tugas Hari Ini!</span>` : ''}
+                                    </div>
+                                    <h4 class="font-bold text-lg ${assign.isCompleted ? 'line-through text-slate-500 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100'} pr-8 md:pr-0">${assign.title}</h4>
+                                    <div class="text-sm text-slate-500 dark:text-slate-400 mt-2 flex flex-col gap-1">
+                                        <span class="flex items-center gap-2"><i class="ph ph-calendar-blank"></i> Waktu: <span class="${window.isToday(assign.dueDate) && !assign.isCompleted ? 'text-red-500 font-semibold' : ''}">${window.formatDate(assign.dueDate)}</span></span>
+                                        ${assign.isGroup ? `<span>Anggota: ${assign.members}</span>` : ''}
+                                    </div>
+                                </div>
+                                <button onclick="window.toggleAssignmentStatus('${course.id}', '${assign.id}')" class="p-3 rounded-xl transition-colors ${assign.isCompleted ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-200' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400'}">
+                                    ${assign.isCompleted ? `<i class="ph-fill ph-check-circle text-3xl"></i>` : `<i class="ph ph-circle text-3xl"></i>`}
+                                </button>
+                            </div>
+                        `).join('')}</div>`;
+                tabContent = `<div class="space-y-4 animate-fadeIn">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">Daftar Tugas</h3>
+                            <button onclick="window.openAssignModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary-500/20"><i class="ph ph-plus"></i> Tambah Tugas</button>
+                        </div>${assignHtml}</div>`;
+            }
 
-        {/* Dummy Setting 2 */}
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-          <div>
-            <h4 className="font-bold text-slate-800">Mode Gelap (Dark Mode)</h4>
-            <p className="text-xs text-slate-500">Mengubah tema aplikasi menjadi gelap.</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
+            return `
+                <div class="space-y-6 animate-fadeIn pb-10">
+                    <div class="flex justify-between items-center mb-2">
+                        <button onclick="window.navigateTo('courses')" class="text-slate-500 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 flex items-center gap-1 font-medium transition-colors"><i class="ph ph-caret-left text-xl"></i> Kembali</button>
+                        <button onclick="window.openCourseModal('${course.id}')" class="text-sm text-primary-600 bg-primary-50 dark:text-primary-400 dark:bg-primary-900/40 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 hover:bg-primary-100 transition-colors"><i class="ph-fill ph-pencil-simple"></i> Edit Matkul</button>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-900 to-primary-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+                        <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                        <h2 class="text-2xl md:text-3xl font-bold mb-2 relative z-10">${course.name}</h2>
+                        <p class="text-primary-200 flex items-center gap-2 mb-4 relative z-10 font-medium"><i class="ph-fill ph-user-circle"></i> ${course.lecturer}</p>
+                        <div class="flex flex-wrap gap-3 text-sm bg-white/10 p-3 rounded-2xl w-fit relative z-10 backdrop-blur-sm border border-white/10">
+                            <span class="flex items-center gap-2"><i class="ph ph-calendar-blank"></i> ${course.day}, ${course.time}</span>
+                            <span class="flex items-center gap-2"><i class="ph ph-map-pin"></i> ${course.room}</span>
+                        </div>
+                    </div>
+                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl max-w-md mx-auto">
+                        <button onclick="window.switchDetailTab('notes')" class="flex-1 py-3 text-sm font-bold rounded-xl flex justify-center gap-2 transition-all ${window.state.detailTab === 'notes' ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}"><i class="ph-fill ph-file-text text-lg"></i> Catatan</button>
+                        <button onclick="window.switchDetailTab('assignments')" class="flex-1 py-3 text-sm font-bold rounded-xl flex justify-center gap-2 transition-all ${window.state.detailTab === 'assignments' ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}"><i class="ph-fill ph-list-checks text-lg"></i> Tugas</button>
+                    </div>
+                    ${tabContent}
+                </div>`;
+        }
 
-        <div className="pt-6 border-t border-slate-100 text-center">
-           <p className="text-xs text-slate-400 mb-4">Aplikasi KuliahKu Versi 1.0.0<br/>Dibuat dengan ❤️</p>
-           <button className="text-red-500 font-bold hover:bg-red-50 px-4 py-2 rounded-xl transition-colors text-sm flex items-center justify-center w-full gap-2">
-              Logout Akun
-           </button>
-        </div>
+        function renderProfile() {
+            const totC = window.state.courses.length;
+            let totT = 0, totN = 0;
+            window.state.courses.forEach(c => { totT += c.assignments.filter(a => a.isCompleted).length; totN += c.notes.length; });
 
-      </div>
-    </div>
-  );
+            const av = window.state.profile.avatarUrl 
+                     ? `<img src="${window.state.profile.avatarUrl}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentNode.innerHTML='<i class=\\'ph-fill ph-student text-primary-500 text-6xl md:text-7xl\\'></i>';">`
+                     : `<i class="ph-fill ph-student text-primary-500 text-6xl md:text-7xl"></i>`;
 
-  // --- RENDER MAIN LAYOUT ---
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-blue-200 selection:text-blue-900">
-      
-      {/* Top Navigation (Desktop) / Header (Mobile) */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-blue-600">
-            <GraduationCap size={32} strokeWidth={2.5} />
-            <span className="text-xl font-extrabold tracking-tight">KuliahKu</span>
-          </div>
-          
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex space-x-1">
-            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Home size={18}/> Beranda
-            </button>
-            <button onClick={() => setActiveTab('courses')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${['courses', 'courseDetail'].includes(activeTab) ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Book size={18}/> Mata Kuliah
-            </button>
-            <button onClick={() => setActiveTab('profile')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <User size={18}/> Profil
-            </button>
-            <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
-              <Settings size={18}/> Pengaturan
-            </button>
-          </nav>
+            return `
+                <div class="max-w-3xl mx-auto space-y-6 animate-fadeIn pb-10">
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="h-32 md:h-40 bg-gradient-to-r from-primary-600 to-primary-400 relative"></div>
+                        <div class="px-6 pb-8 md:px-10">
+                            <div class="flex flex-col md:flex-row gap-6 items-center md:items-end -mt-16 md:-mt-20 mb-6">
+                                <div class="w-32 h-32 md:w-40 md:h-40 rounded-full bg-white dark:bg-slate-800 p-2 shadow-xl flex-shrink-0 relative z-10">
+                                    <div class="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-slate-700 dark:to-slate-600 rounded-full flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-600">
+                                        ${av}
+                                    </div>
+                                </div>
+                                <div class="flex-1 text-center md:text-left pt-2 pb-2">
+                                    <h3 class="text-3xl font-extrabold text-slate-800 dark:text-white mb-1">${window.state.profile.name}</h3>
+                                    <p class="text-primary-600 dark:text-primary-400 font-bold text-lg mb-1">${window.state.profile.major}</p>
+                                    <p class="text-slate-500 dark:text-slate-400 font-medium"><i class="ph-fill ph-buildings"></i> ${window.state.profile.university} • NIM: ${window.state.profile.nim}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-3 md:gap-6 mb-8 border-y border-slate-100 dark:border-slate-700 py-6">
+                                <div class="text-center"><div class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white">${totC}</div><div class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase mt-1 font-bold">Mata Kuliah</div></div>
+                                <div class="text-center border-x border-slate-100 dark:border-slate-700"><div class="text-2xl md:text-3xl font-bold text-primary-600 dark:text-primary-400">${totT}</div><div class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase mt-1 font-bold">Tugas Selesai</div></div>
+                                <div class="text-center"><div class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white">${totN}</div><div class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 uppercase mt-1 font-bold">Total Catatan</div></div>
+                            </div>
 
-          {/* User Avatar Mini */}
-          <div className="w-9 h-9 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-            {profile.name.charAt(0)}
-          </div>
-        </div>
-      </header>
+                            <form id="form-profile" class="space-y-4" onsubmit="window.handleUpdateProfile(event)">
+                                <h4 class="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><i class="ph-fill ph-pencil-simple text-primary-500"></i> Edit Informasi Profil</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Link Foto Profil (URL Image)</label>
+                                        <input type="url" name="avatarUrl" value="${window.state.profile.avatarUrl || ''}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors" placeholder="https://contoh.com/fotoku.jpg">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Nama Lengkap</label>
+                                        <input type="text" name="name" value="${window.state.profile.name}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">NIM</label>
+                                        <input type="text" name="nim" value="${window.state.profile.nim}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Universitas</label>
+                                        <input type="text" name="university" value="${window.state.profile.university}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Program Studi</label>
+                                        <input type="text" name="major" value="${window.state.profile.major}" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors" required>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">Bio / Motto</label>
+                                        <textarea name="bio" rows="2" class="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none dark:text-white transition-colors">${window.state.profile.bio}</textarea>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-slate-800 dark:bg-primary-600 hover:bg-slate-900 dark:hover:bg-primary-700 text-white font-bold py-4 rounded-xl mt-4 shadow-lg transition-all">Simpan Profil Secara Permanen</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>`;
+        }
 
-      {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        {activeTab === 'dashboard' && renderDashboard()}
-        {activeTab === 'courses' && renderCourses()}
-        {activeTab === 'courseDetail' && renderCourseDetail()}
-        {activeTab === 'profile' && renderProfile()}
-        {activeTab === 'settings' && renderSettings()}
-      </main>
+        function renderSettings() {
+            const themes = [
+                { id: 'blue', color: 'bg-blue-500' }, { id: 'emerald', color: 'bg-emerald-500' },
+                { id: 'violet', color: 'bg-violet-500' }, { id: 'rose', color: 'bg-rose-500' }
+            ];
 
-      {/* Bottom Navigation (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 pb-safe shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-40">
-        <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
-          <Home size={24} />
-          <span className="text-[10px] font-bold mt-1">Beranda</span>
-        </button>
-        <button onClick={() => setActiveTab('courses')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${['courses', 'courseDetail'].includes(activeTab) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
-          <Book size={24} />
-          <span className="text-[10px] font-bold mt-1">Kuliah</span>
-        </button>
-        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'profile' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
-          <User size={24} />
-          <span className="text-[10px] font-bold mt-1">Profil</span>
-        </button>
-        <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'settings' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
-          <Settings size={24} />
-          <span className="text-[10px] font-bold mt-1">Setting</span>
-        </button>
-      </nav>
+            return `
+                <div class="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-10">
+                    <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-6">Pengaturan Aplikasi</h2>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 space-y-6">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-100 dark:border-slate-600">
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-1">Tema Warna Utama</h4>
+                            <div class="flex gap-4 mt-3">
+                                ${themes.map(t => `<button onclick="window.changeTheme('${t.id}')" class="w-10 h-10 rounded-full ${t.color} flex items-center justify-center transition-transform hover:scale-110 ${window.state.theme === t.id ? 'ring-4 ring-offset-2 ring-slate-300 dark:ring-slate-600' : ''}">${window.state.theme === t.id ? '<i class="ph-bold ph-check text-white"></i>' : ''}</button>`).join('')}
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-100 dark:border-slate-600">
+                            <div><h4 class="font-bold text-slate-800 dark:text-white flex items-center gap-2"><i class="ph-fill ph-moon"></i> Mode Gelap (Dark Mode)</h4></div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" ${window.state.darkMode ? 'checked' : ''} onchange="window.toggleDarkMode()">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                        <div class="pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
+                            <p class="text-xs font-bold text-green-600 dark:text-green-400 mb-4 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg"><i class="ph-fill ph-cloud-check text-lg"></i> Tersinkronisasi dengan Cloud</p>
+                        </div>
+                    </div>
+                </div>`;
+        }
 
-      {/* --- MODALS --- */}
-      
-      {/* Modal Tambah Mata Kuliah */}
-      {isCourseModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn">
-            <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Tambah Mata Kuliah Baru</h3>
-              <button onClick={() => setIsCourseModalOpen(false)} className="text-blue-200 hover:text-white">&times;</button>
-            </div>
-            <form onSubmit={handleAddCourse} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">NAMA MATA KULIAH</label>
-                <input type="text" name="name" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Basis Data" required autoFocus/>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">NAMA DOSEN</label>
-                <input type="text" name="lecturer" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Dr. Budi" required/>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">HARI</label>
-                  <select name="day" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                    {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">WAKTU</label>
-                  <input type="text" name="time" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08:00 - 10:00" required/>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">RUANGAN</label>
-                <input type="text" name="room" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Gedung A Lt 2" required/>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsCourseModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30">Simpan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        // ================= FORM ACTIONS & EDIT LOGIC =================
+        window.toggleAssignmentStatus = (cId, aId) => {
+            const course = window.state.courses.find(c => c.id === cId);
+            if(course) {
+                const assign = course.assignments.find(a => a.id === aId);
+                if(assign) {
+                    assign.isCompleted = !assign.isCompleted;
+                    saveCourseToCloud(course); 
+                    window.renderApp(); 
+                }
+            }
+        };
 
-      {/* Modal Tambah Catatan */}
-      {isNoteModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scaleIn">
-             <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-              <h3 className="font-bold text-lg">Buat Catatan Baru</h3>
-              <button onClick={() => setIsNoteModalOpen(false)} className="text-blue-200 hover:text-white">&times;</button>
-            </div>
-            <form onSubmit={handleAddNote} className="p-6 space-y-4">
-              <div>
-                <input type="text" name="title" className="w-full text-xl font-bold border-b border-slate-200 px-2 py-2 focus:border-blue-500 outline-none bg-transparent" placeholder="Judul Catatan..." required autoFocus/>
-              </div>
-              <div>
-                <textarea name="content" rows="6" className="w-full bg-yellow-50/50 border border-yellow-100 rounded-2xl p-4 focus:ring-2 focus:ring-yellow-300 outline-none text-slate-700 resize-none leading-relaxed" placeholder="Mulai menulis catatan kuliahmu di sini..." required></textarea>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setIsNoteModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">Batal</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30">Simpan Catatan</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        window.handleUpdateProfile = (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            window.state.profile = {
+                name: fd.get('name'), nim: fd.get('nim'), university: fd.get('university'),
+                major: fd.get('major'), bio: fd.get('bio'), avatarUrl: fd.get('avatarUrl')
+            };
+            saveProfileToCloud();
+            alert('Mantap! Profil berhasil disimpan secara permanen di Cloud.');
+            window.renderApp();
+        };
 
-      {/* Modal Tambah Tugas */}
-      {isAssignmentModalOpen && (
-        <AssignmentModal 
-          onClose={() => setIsAssignmentModalOpen(false)} 
-          onSubmit={handleAddAssignment} 
-        />
-      )}
+        // --- MODAL UTILS ---
+        window.openModal = (id) => {
+            const m = document.getElementById(id), c = document.getElementById(`${id}-content`);
+            m.classList.remove('hidden');
+            setTimeout(() => { m.classList.remove('opacity-0'); c.classList.remove('scale-95'); c.classList.add('scale-100'); }, 10);
+        };
+        window.closeModal = (id) => {
+            const m = document.getElementById(id), c = document.getElementById(`${id}-content`);
+            m.classList.add('opacity-0'); c.classList.remove('scale-100'); c.classList.add('scale-95');
+            setTimeout(() => { m.classList.add('hidden'); document.getElementById(`form-${id.split('-')[1]}`).reset(); }, 300);
+        };
 
-    </div>
-  );
-}
+        // --- COURSE MODAL (ADD / EDIT) ---
+        window.openCourseModal = (courseId = null) => {
+            document.getElementById('form-course').reset();
+            if (courseId) {
+                const c = window.state.courses.find(x => x.id === courseId);
+                if(c) {
+                    document.getElementById('modal-course-title').innerText = 'Edit Mata Kuliah';
+                    document.getElementById('course-edit-id').value = c.id;
+                    document.getElementById('course-name').value = c.name;
+                    document.getElementById('course-lecturer').value = c.lecturer;
+                    document.getElementById('course-day').value = c.day;
+                    document.getElementById('course-time').value = c.time;
+                    document.getElementById('course-room').value = c.room;
+                }
+            } else {
+                document.getElementById('modal-course-title').innerText = 'Tambah Mata Kuliah';
+                document.getElementById('course-edit-id').value = '';
+            }
+            window.openModal('modal-course');
+        };
 
-// Terpisah untuk logika form tugas yang lebih kompleks
-function AssignmentModal({ onClose, onSubmit }) {
-  const [isGroup, setIsGroup] = useState(false);
+        document.getElementById('form-course').addEventListener('submit', (e) => {
+            e.preventDefault(); const fd = new FormData(e.target);
+            const isEditId = fd.get('id');
+            const cData = {
+                id: isEditId || window.generateId(), name: fd.get('name'), lecturer: fd.get('lecturer'),
+                day: fd.get('day'), time: fd.get('time'), room: fd.get('room'),
+            };
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn my-8">
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-600 p-5 text-white flex justify-between items-center">
-          <h3 className="font-bold text-lg flex items-center gap-2"><ListTodo size={20}/> Catat Tugas Baru</h3>
-          <button type="button" onClick={onClose} className="text-blue-200 hover:text-white bg-white/10 p-1 rounded-full">&times;</button>
-        </div>
-        
-        <form onSubmit={onSubmit} className="p-6 space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">JUDUL TUGAS</label>
-            <input type="text" name="title" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Membuat Makalah Sejarah AI" required autoFocus/>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">JENIS TUGAS</label>
-                <select name="type" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="Makalah">Makalah</option>
-                  <option value="Artikel">Artikel</option>
-                  <option value="PPT">Presentasi (PPT)</option>
-                  <option value="Review Jurnal">Review Jurnal</option>
-                  <option value="Projek">Projek Codding</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
-             </div>
-             <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">TENGGAT WAKTU (DEADLINE)</label>
-                <input type="datetime-local" name="dueDate" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required/>
-             </div>
-          </div>
+            if (isEditId) {
+                const idx = window.state.courses.findIndex(c => c.id === isEditId);
+                if(idx > -1) {
+                    window.state.courses[idx] = { ...window.state.courses[idx], ...cData };
+                    saveCourseToCloud(window.state.courses[idx]);
+                }
+            } else {
+                cData.notes = []; cData.assignments = [];
+                window.state.courses.push(cData);
+                saveCourseToCloud(cData);
+            }
+            window.closeModal('modal-course'); window.renderApp();
+        });
 
-          <div>
-             <label className="block text-xs font-bold text-slate-500 mb-2">SIFAT TUGAS</label>
-             <div className="flex gap-4 bg-slate-50 p-1 rounded-xl border border-slate-200">
-               <label className={`flex-1 text-center py-2 rounded-lg cursor-pointer text-sm font-bold transition-all ${!isGroup ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                 <input type="radio" name="isGroup" value="false" className="hidden" onChange={() => setIsGroup(false)} defaultChecked/>
-                 Individu
-               </label>
-               <label className={`flex-1 text-center py-2 rounded-lg cursor-pointer text-sm font-bold transition-all ${isGroup ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                 <input type="radio" name="isGroup" value="true" className="hidden" onChange={() => setIsGroup(true)}/>
-                 Kelompok
-               </label>
-             </div>
-          </div>
+        // --- NOTE MODAL (ADD / EDIT) ---
+        window.openNoteModal = (noteId = null) => {
+            document.getElementById('form-note').reset();
+            if (noteId) {
+                const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
+                const n = course.notes.find(x => x.id === noteId);
+                if (n) {
+                    document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Edit Catatan';
+                    document.getElementById('note-edit-id').value = n.id;
+                    document.getElementById('note-title').value = n.title;
+                    document.getElementById('note-content').value = n.content;
+                }
+            } else {
+                document.getElementById('modal-note-title').innerHTML = '<i class="ph-fill ph-file-text"></i> Buat Catatan';
+                document.getElementById('note-edit-id').value = '';
+            }
+            window.openModal('modal-note');
+        };
 
-          {isGroup && (
-            <div className="animate-fadeIn">
-              <label className="block text-xs font-bold text-slate-500 mb-1">NAMA ANGGOTA KELOMPOK</label>
-              <textarea name="members" rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-400" placeholder="Contoh: Rina, Budi, Dimas (Pisahkan dengan koma)" required></textarea>
-            </div>
-          )}
+        document.getElementById('form-note').addEventListener('submit', (e) => {
+            e.preventDefault(); const fd = new FormData(e.target);
+            const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
+            if (!course) return;
 
-          <div className="flex gap-3 pt-2 mt-6">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">Batal</button>
-            <button type="submit" className="flex-[2] px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all">Simpan Tugas</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+            const isEditId = fd.get('id');
+            if (isEditId) {
+                const nIdx = course.notes.findIndex(x => x.id === isEditId);
+                if (nIdx > -1) {
+                    course.notes[nIdx].title = fd.get('title');
+                    course.notes[nIdx].content = fd.get('content');
+                }
+            } else {
+                course.notes.unshift({ id: window.generateId(), title: fd.get('title'), content: fd.get('content'), date: new Date().toISOString() });
+            }
+            saveCourseToCloud(course);
+            window.closeModal('modal-note'); window.renderApp();
+        });
 
-// Tambahan style CSS kecil untuk animasi
-const styles = `
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out forwards;
-  }
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .animate-scaleIn {
-    animation: scaleIn 0.2s ease-out forwards;
-  }
-`;
-const styleSheet = document.createElement("style");
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
+        // --- ASSIGNMENT MODAL (ADD / EDIT) ---
+        window.toggleGroupMembers = (isGroup) => {
+            const cont = document.getElementById('group-members-container');
+            if(isGroup) { cont.classList.remove('hidden'); } else { cont.classList.add('hidden'); }
+        };
+
+        window.openAssignModal = (assignId = null) => {
+            document.getElementById('form-assignment').reset();
+            window.toggleGroupMembers(false);
+            
+            if (assignId) {
+                const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
+                const a = course.assignments.find(x => x.id === assignId);
+                if (a) {
+                    document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Edit Tugas';
+                    document.getElementById('assign-edit-id').value = a.id;
+                    document.getElementById('assign-title').value = a.title;
+                    document.getElementById('assign-type').value = a.type;
+                    
+                    const d = new Date(a.dueDate);
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    document.getElementById('assign-date').value = d.toISOString().slice(0,16);
+
+                    if(a.isGroup) { document.getElementById('assign-group').checked = true; window.toggleGroupMembers(true); document.getElementById('assign-members').value = a.members; }
+                    else { document.getElementById('assign-indiv').checked = true; }
+                }
+            } else {
+                document.getElementById('modal-assign-title').innerHTML = '<i class="ph ph-list-checks text-xl"></i> Tugas Baru';
+                document.getElementById('assign-edit-id').value = '';
+                const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                document.getElementById('assign-date').value = d.toISOString().slice(0,16);
+            }
+            window.openModal('modal-assignment');
+        };
+
+        document.getElementById('form-assignment').addEventListener('submit', (e) => {
+            e.preventDefault(); const fd = new FormData(e.target);
+            const course = window.state.courses.find(c => c.id === window.state.activeCourseId);
+            if(!course) return;
+
+            const isGroup = fd.get('isGroup') === 'true';
+            const isEditId = fd.get('id');
+            const data = {
+                title: fd.get('title'), type: fd.get('type'), isGroup: isGroup,
+                members: isGroup ? fd.get('members') : '', dueDate: fd.get('dueDate')
+            };
+
+            if (isEditId) {
+                const idx = course.assignments.findIndex(x => x.id === isEditId);
+                if(idx > -1) { course.assignments[idx] = { ...course.assignments[idx], ...data }; }
+            } else {
+                data.id = window.generateId(); data.isCompleted = false;
+                course.assignments.push(data);
+            }
+            course.assignments.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+            saveCourseToCloud(course);
+            window.closeModal('modal-assignment'); window.renderApp();
+        });
+
+    </script>
 
     <script>
       if ('serviceWorker' in navigator) {
@@ -804,3 +947,5 @@ document.head.appendChild(styleSheet);
       }
     </script>
   
+</body>
+</html>
