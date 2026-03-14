@@ -1,0 +1,806 @@
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+  
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Home, Book, User, Settings, Plus, Calendar, Clock, MapPin, 
+  FileText, CheckCircle, Circle, Users, UserRound, ChevronLeft,
+  GraduationCap, Bell, Search, Edit3, Trash2, CheckSquare, ListTodo,
+  AlertCircle
+} from 'lucide-react';
+
+// --- MOCK DATA AWAL ---
+const initialProfile = {
+  name: 'Mahasiswa Berprestasi',
+  university: 'Universitas Indonesia',
+  major: 'Sistem Informasi',
+  bio: 'Fokus belajar dan capai IPK 4.0!'
+};
+
+const initialCourses = [
+  {
+    id: 'c1',
+    name: 'Pemrograman Web',
+    lecturer: 'Bpk. Budi Santoso, M.Kom.',
+    day: 'Senin',
+    time: '08:00 - 10:30',
+    room: 'Lab Komputer 1',
+    notes: [
+      { id: 'n1', title: 'Pengenalan React', content: 'React adalah library JS untuk membuat UI. Konsep utamanya adalah komponen dan state.', date: new Date().toISOString() }
+    ],
+    assignments: [
+      { 
+        id: 'a1', 
+        title: 'Membuat UI Sederhana', 
+        type: 'Praktikum', 
+        isGroup: false, 
+        members: '', 
+        dueDate: new Date(new Date().setHours(23, 59, 0, 0)).toISOString(), // Hari ini
+        isCompleted: false 
+      }
+    ]
+  },
+  {
+    id: 'c2',
+    name: 'Rekayasa Perangkat Lunak',
+    lecturer: 'Ibu Siti Aminah, Ph.D.',
+    day: 'Selasa',
+    time: '13:00 - 15:30',
+    room: 'Ruang A.3.2',
+    notes: [],
+    assignments: [
+      { 
+        id: 'a2', 
+        title: 'Analisis Kebutuhan Sistem', 
+        type: 'Makalah', 
+        isGroup: true, 
+        members: 'Andi, Budi, Citra', 
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(), // Besok
+        isCompleted: false 
+      }
+    ]
+  }
+];
+
+export default function App() {
+  // --- STATE MANAGEMENT ---
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, courses, profile, settings
+  const [activeCourseId, setActiveCourseId] = useState(null);
+  
+  const [profile, setProfile] = useState(initialProfile);
+  const [courses, setCourses] = useState(initialCourses);
+  
+  // Modal States
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+
+  // --- HELPER FUNCTIONS ---
+  const getActiveCourse = () => courses.find(c => c.id === activeCourseId);
+
+  const isToday = (dateString) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  };
+
+  const isTomorrow = (dateString) => {
+    const date = new Date(dateString);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return date.getDate() === tomorrow.getDate() && date.getMonth() === tomorrow.getMonth() && date.getFullYear() === tomorrow.getFullYear();
+  };
+
+  const formatDate = (dateString) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  };
+
+  // --- DERIVED STATE (DASHBOARD) ---
+  const allAssignments = useMemo(() => {
+    return courses.flatMap(course => 
+      course.assignments.map(assign => ({ ...assign, courseName: course.name, courseId: course.id }))
+    ).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  }, [courses]);
+
+  const pendingAssignments = allAssignments.filter(a => !a.isCompleted);
+  const todayAssignments = pendingAssignments.filter(a => isToday(a.dueDate));
+  const tomorrowAssignments = pendingAssignments.filter(a => isTomorrow(a.dueDate));
+
+  // --- HANDLERS ---
+  const handleAddCourse = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const newCourse = {
+      id: Date.now().toString(),
+      name: formData.get('name'),
+      lecturer: formData.get('lecturer'),
+      day: formData.get('day'),
+      time: formData.get('time'),
+      room: formData.get('room'),
+      notes: [],
+      assignments: []
+    };
+    setCourses([...courses, newCourse]);
+    setIsCourseModalOpen(false);
+  };
+
+  const handleAddNote = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const newNote = {
+      id: Date.now().toString(),
+      title: formData.get('title'),
+      content: formData.get('content'),
+      date: new Date().toISOString()
+    };
+    setCourses(courses.map(c => c.id === activeCourseId ? { ...c, notes: [newNote, ...c.notes] } : c));
+    setIsNoteModalOpen(false);
+  };
+
+  const handleAddAssignment = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const isGroup = formData.get('isGroup') === 'true';
+    const newAssignment = {
+      id: Date.now().toString(),
+      title: formData.get('title'),
+      type: formData.get('type'),
+      isGroup: isGroup,
+      members: isGroup ? formData.get('members') : '',
+      dueDate: formData.get('dueDate'),
+      isCompleted: false
+    };
+    setCourses(courses.map(c => c.id === activeCourseId ? { ...c, assignments: [...c.assignments, newAssignment].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)) } : c));
+    setIsAssignmentModalOpen(false);
+  };
+
+  const toggleAssignmentStatus = (courseId, assignmentId) => {
+    setCourses(courses.map(c => {
+      if (c.id === courseId) {
+        return {
+          ...c,
+          assignments: c.assignments.map(a => a.id === assignmentId ? { ...a, isCompleted: !a.isCompleted } : a)
+        };
+      }
+      return c;
+    }));
+  };
+
+  const handleUpdateProfile = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    setProfile({
+      name: formData.get('name'),
+      university: formData.get('university'),
+      major: formData.get('major'),
+      bio: formData.get('bio'),
+    });
+    alert('Profil berhasil diperbarui!');
+  };
+
+  // --- RENDERERS ---
+
+  const renderDashboard = () => (
+    <div className="space-y-6 animate-fadeIn pb-24">
+      {/* Header Greeting */}
+      <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-3xl p-6 text-white shadow-lg shadow-blue-500/30">
+        <h2 className="text-3xl font-bold mb-2">Halo, {profile.name.split(' ')[0]}! 👋</h2>
+        <p className="text-blue-100 opacity-90">Tetap semangat, mari selesaikan tugas-tugasmu hari ini.</p>
+        
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
+            <div className="text-3xl font-bold mb-1">{pendingAssignments.length}</div>
+            <div className="text-xs text-blue-100 uppercase tracking-wider">Tugas Aktif</div>
+          </div>
+          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
+            <div className="text-3xl font-bold mb-1">{todayAssignments.length}</div>
+            <div className="text-xs text-blue-100 uppercase tracking-wider">Hari Ini</div>
+          </div>
+          <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 text-center border border-white/10">
+            <div className="text-3xl font-bold mb-1">{tomorrowAssignments.length}</div>
+            <div className="text-xs text-blue-100 uppercase tracking-wider">Besok</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications Section */}
+      <div>
+        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <Bell className="text-blue-600" size={24}/>
+          Notifikasi Tugas
+        </h3>
+        
+        {pendingAssignments.length === 0 ? (
+          <div className="bg-blue-50 rounded-2xl p-8 text-center border border-blue-100">
+            <CheckSquare className="mx-auto text-blue-300 mb-3" size={48} />
+            <p className="text-slate-600 font-medium">Hore! Tidak ada tugas yang tertunda.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {todayAssignments.length > 0 && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-2xl shadow-sm">
+                <h4 className="font-bold text-red-700 flex items-center gap-2 mb-2">
+                  <AlertCircle size={18}/> Tenggat Waktu Hari Ini!
+                </h4>
+                {todayAssignments.map(a => (
+                  <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl mt-2 shadow-sm border border-red-100">
+                    <div>
+                      <p className="font-semibold text-slate-800">{a.title}</p>
+                      <p className="text-xs text-slate-500">{a.courseName} • {a.type}</p>
+                    </div>
+                    <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-red-500 hover:text-red-700">
+                      <Circle size={24} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tomorrowAssignments.length > 0 && (
+              <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-2xl shadow-sm">
+                <h4 className="font-bold text-orange-700 flex items-center gap-2 mb-2">
+                  <Clock size={18}/> Tenggat Waktu Besok
+                </h4>
+                {tomorrowAssignments.map(a => (
+                  <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl mt-2 shadow-sm border border-orange-100">
+                    <div>
+                      <p className="font-semibold text-slate-800">{a.title}</p>
+                      <p className="text-xs text-slate-500">{a.courseName} • {a.type}</p>
+                    </div>
+                    <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-orange-500 hover:text-orange-700">
+                      <Circle size={24} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Other Pending Assignments */}
+            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+               <h4 className="font-bold text-blue-800 flex items-center gap-2 mb-3">
+                  <ListTodo size={18}/> Tugas Mendatang
+                </h4>
+                <div className="space-y-2">
+                {pendingAssignments.filter(a => !isToday(a.dueDate) && !isTomorrow(a.dueDate)).slice(0, 5).map(a => (
+                   <div key={a.id} className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-blue-50">
+                   <div>
+                     <p className="font-semibold text-slate-800">{a.title}</p>
+                     <p className="text-xs text-slate-500">{a.courseName} • {new Date(a.dueDate).toLocaleDateString('id-ID')}</p>
+                   </div>
+                   <button onClick={() => toggleAssignmentStatus(a.courseId, a.id)} className="text-blue-400 hover:text-blue-600">
+                     <Circle size={24} />
+                   </button>
+                 </div>
+                ))}
+                {pendingAssignments.filter(a => !isToday(a.dueDate) && !isTomorrow(a.dueDate)).length === 0 && (
+                  <p className="text-sm text-blue-600/70 text-center py-2">Tidak ada tugas lain dalam waktu dekat.</p>
+                )}
+                </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCourses = () => (
+    <div className="space-y-6 animate-fadeIn pb-24">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-slate-800">Mata Kuliah</h2>
+        <button 
+          onClick={() => setIsCourseModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white p-2 md:px-4 md:py-2 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all"
+        >
+          <Plus size={20} /> <span className="hidden md:inline">Tambah</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {courses.map(course => (
+          <div 
+            key={course.id} 
+            onClick={() => { setActiveCourseId(course.id); setActiveTab('courseDetail'); }}
+            className="bg-white p-5 rounded-3xl border border-blue-100 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all cursor-pointer group"
+          >
+            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <Book size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-1">{course.name}</h3>
+            <p className="text-sm text-slate-500 mb-4 flex items-center gap-2"><UserRound size={14}/> {course.lecturer}</p>
+            
+            <div className="flex flex-col gap-2 text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div className="flex items-center gap-2"><Calendar size={14} className="text-blue-500"/> {course.day}, {course.time}</div>
+              <div className="flex items-center gap-2"><MapPin size={14} className="text-blue-500"/> {course.room}</div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <span className="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full font-semibold border border-blue-100">
+                {course.notes.length} Catatan
+              </span>
+              <span className="bg-orange-50 text-orange-700 text-xs px-3 py-1 rounded-full font-semibold border border-orange-100">
+                {course.assignments.filter(a => !a.isCompleted).length} Tugas Aktif
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderCourseDetail = () => {
+    const course = getActiveCourse();
+    if (!course) return null;
+
+    // Sub-tab state for detail view
+    const [detailTab, setDetailTab] = useState('notes'); // notes, assignments
+
+    return (
+      <div className="space-y-6 animate-fadeIn pb-24">
+        {/* Header Back Button & Course Info */}
+        <div>
+          <button 
+            onClick={() => setActiveTab('courses')}
+            className="text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-4 font-medium transition-colors"
+          >
+            <ChevronLeft size={20} /> Kembali ke Mata Kuliah
+          </button>
+          
+          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden">
+             {/* Decorative circle */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+            
+            <h2 className="text-3xl font-bold mb-2 relative z-10">{course.name}</h2>
+            <p className="text-blue-200 flex items-center gap-2 mb-4 relative z-10"><UserRound size={16}/> {course.lecturer}</p>
+            
+            <div className="flex flex-wrap gap-4 text-sm font-medium bg-white/10 p-3 rounded-2xl w-fit backdrop-blur-sm relative z-10 border border-white/10">
+              <div className="flex items-center gap-2"><Calendar size={16}/> {course.day}, {course.time}</div>
+              <div className="flex items-center gap-2"><MapPin size={16}/> {course.room}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs for Notes & Assignments */}
+        <div className="flex bg-slate-100 p-1 rounded-2xl max-w-md mx-auto">
+          <button 
+            onClick={() => setDetailTab('notes')}
+            className={`flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${detailTab === 'notes' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            <FileText size={18}/> Catatan Materi
+          </button>
+          <button 
+            onClick={() => setDetailTab('assignments')}
+            className={`flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${detailTab === 'assignments' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            <ListTodo size={18}/> Tugas Kuliah
+          </button>
+        </div>
+
+        {/* --- NOTES SECTION --- */}
+        {detailTab === 'notes' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xl font-bold text-slate-800">Riwayat Catatan</h3>
+              <button onClick={() => setIsNoteModalOpen(true)} className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors">
+                <Plus size={16}/> Buat Catatan
+              </button>
+            </div>
+            
+            {course.notes.length === 0 ? (
+              <div className="text-center py-10 bg-white border border-dashed border-slate-300 rounded-3xl">
+                <FileText className="mx-auto text-slate-300 mb-2" size={48} />
+                <p className="text-slate-500">Belum ada catatan untuk mata kuliah ini.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {course.notes.map(note => (
+                  <div key={note.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h4 className="font-bold text-lg text-slate-800 mb-1">{note.title}</h4>
+                    <p className="text-xs text-slate-400 mb-3">{new Date(note.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    <p className="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- ASSIGNMENTS SECTION --- */}
+        {detailTab === 'assignments' && (
+          <div className="space-y-4 animate-fadeIn">
+             <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xl font-bold text-slate-800">Daftar Tugas</h3>
+              <button onClick={() => setIsAssignmentModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20">
+                <Plus size={16}/> Tambah Tugas
+              </button>
+            </div>
+
+            {course.assignments.length === 0 ? (
+               <div className="text-center py-10 bg-white border border-dashed border-slate-300 rounded-3xl">
+               <ListTodo className="mx-auto text-slate-300 mb-2" size={48} />
+               <p className="text-slate-500">Yey! Belum ada tugas yang diberikan.</p>
+             </div>
+            ) : (
+              <div className="space-y-3">
+                {course.assignments.map(assign => (
+                  <div key={assign.id} className={`p-5 rounded-3xl border transition-all flex flex-col md:flex-row gap-4 justify-between items-start md:items-center ${assign.isCompleted ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-blue-100 shadow-sm hover:shadow-md'}`}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className={`text-xs font-bold px-2 py-1 rounded-md ${assign.isCompleted ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700'}`}>
+                          {assign.type}
+                        </span>
+                        {assign.isGroup ? (
+                           <span className="text-xs font-bold px-2 py-1 rounded-md bg-purple-100 text-purple-700 flex items-center gap-1">
+                             <Users size={12}/> Kelompok
+                           </span>
+                        ) : (
+                           <span className="text-xs font-bold px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                             <User size={12}/> Individu
+                           </span>
+                        )}
+                        {isToday(assign.dueDate) && !assign.isCompleted && <span className="text-xs font-bold px-2 py-1 rounded-md bg-red-100 text-red-600 animate-pulse">Hari Ini!</span>}
+                      </div>
+                      
+                      <h4 className={`font-bold text-lg ${assign.isCompleted ? 'line-through text-slate-500' : 'text-slate-800'}`}>{assign.title}</h4>
+                      
+                      <div className="text-sm text-slate-500 mt-2 flex flex-col gap-1">
+                        <span className="flex items-center gap-2"><Calendar size={14}/> Tenggat: <span className={isToday(assign.dueDate) && !assign.isCompleted ? 'text-red-500 font-semibold' : ''}>{formatDate(assign.dueDate)}</span></span>
+                        {assign.isGroup && <span className="flex items-center gap-2"><Users size={14}/> Anggota: {assign.members}</span>}
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => toggleAssignmentStatus(course.id, assign.id)}
+                      className={`p-3 rounded-xl transition-colors flex-shrink-0 ${assign.isCompleted ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                    >
+                      {assign.isCompleted ? <CheckCircle size={28} /> : <Circle size={28} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderProfile = () => (
+    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-24">
+      <h2 className="text-2xl font-bold text-slate-800 mb-6">Profil Mahasiswa</h2>
+      
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100">
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start mb-8">
+          <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-400 p-1 shadow-xl shadow-blue-500/20">
+            <div className="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden">
+               {/* Placeholder Avatar */}
+               <GraduationCap className="text-blue-500 w-16 h-16" />
+            </div>
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="text-2xl font-bold text-slate-800">{profile.name}</h3>
+            <p className="text-blue-600 font-medium text-lg">{profile.major}</p>
+            <p className="text-slate-500 mb-4">{profile.university}</p>
+            <p className="text-sm bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-slate-600">"{profile.bio}"</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleUpdateProfile} className="space-y-4 pt-6 border-t border-slate-100">
+          <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Edit3 size={18}/> Edit Profil</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Nama Lengkap</label>
+              <input type="text" name="name" defaultValue={profile.name} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Universitas</label>
+              <input type="text" name="university" defaultValue={profile.university} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Program Studi</label>
+              <input type="text" name="major" defaultValue={profile.major} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" required/>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Bio / Motto</label>
+              <textarea name="bio" defaultValue={profile.bio} rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"></textarea>
+            </div>
+          </div>
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-4 shadow-lg shadow-blue-500/30 transition-all">
+            Simpan Perubahan
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn pb-24">
+      <h2 className="text-2xl font-bold text-slate-800 mb-6">Pengaturan Aplikasi</h2>
+      
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
+        
+        {/* Dummy Setting 1 */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div>
+            <h4 className="font-bold text-slate-800">Notifikasi Pengingat Tugas</h4>
+            <p className="text-xs text-slate-500">Menerima peringatan H-1 sebelum tenggat waktu.</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" defaultChecked className="sr-only peer" />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Dummy Setting 2 */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div>
+            <h4 className="font-bold text-slate-800">Mode Gelap (Dark Mode)</h4>
+            <p className="text-xs text-slate-500">Mengubah tema aplikasi menjadi gelap.</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" className="sr-only peer" />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        <div className="pt-6 border-t border-slate-100 text-center">
+           <p className="text-xs text-slate-400 mb-4">Aplikasi KuliahKu Versi 1.0.0<br/>Dibuat dengan ❤️</p>
+           <button className="text-red-500 font-bold hover:bg-red-50 px-4 py-2 rounded-xl transition-colors text-sm flex items-center justify-center w-full gap-2">
+              Logout Akun
+           </button>
+        </div>
+
+      </div>
+    </div>
+  );
+
+  // --- RENDER MAIN LAYOUT ---
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-blue-200 selection:text-blue-900">
+      
+      {/* Top Navigation (Desktop) / Header (Mobile) */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-blue-600">
+            <GraduationCap size={32} strokeWidth={2.5} />
+            <span className="text-xl font-extrabold tracking-tight">KuliahKu</span>
+          </div>
+          
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex space-x-1">
+            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <Home size={18}/> Beranda
+            </button>
+            <button onClick={() => setActiveTab('courses')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${['courses', 'courseDetail'].includes(activeTab) ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <Book size={18}/> Mata Kuliah
+            </button>
+            <button onClick={() => setActiveTab('profile')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <User size={18}/> Profil
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <Settings size={18}/> Pengaturan
+            </button>
+          </nav>
+
+          {/* User Avatar Mini */}
+          <div className="w-9 h-9 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+            {profile.name.charAt(0)}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        {activeTab === 'dashboard' && renderDashboard()}
+        {activeTab === 'courses' && renderCourses()}
+        {activeTab === 'courseDetail' && renderCourseDetail()}
+        {activeTab === 'profile' && renderProfile()}
+        {activeTab === 'settings' && renderSettings()}
+      </main>
+
+      {/* Bottom Navigation (Mobile) */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around p-3 pb-safe shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-40">
+        <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+          <Home size={24} />
+          <span className="text-[10px] font-bold mt-1">Beranda</span>
+        </button>
+        <button onClick={() => setActiveTab('courses')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${['courses', 'courseDetail'].includes(activeTab) ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+          <Book size={24} />
+          <span className="text-[10px] font-bold mt-1">Kuliah</span>
+        </button>
+        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'profile' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+          <User size={24} />
+          <span className="text-[10px] font-bold mt-1">Profil</span>
+        </button>
+        <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 rounded-xl w-16 ${activeTab === 'settings' ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
+          <Settings size={24} />
+          <span className="text-[10px] font-bold mt-1">Setting</span>
+        </button>
+      </nav>
+
+      {/* --- MODALS --- */}
+      
+      {/* Modal Tambah Mata Kuliah */}
+      {isCourseModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn">
+            <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">Tambah Mata Kuliah Baru</h3>
+              <button onClick={() => setIsCourseModalOpen(false)} className="text-blue-200 hover:text-white">&times;</button>
+            </div>
+            <form onSubmit={handleAddCourse} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">NAMA MATA KULIAH</label>
+                <input type="text" name="name" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Basis Data" required autoFocus/>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">NAMA DOSEN</label>
+                <input type="text" name="lecturer" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Dr. Budi" required/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">HARI</label>
+                  <select name="day" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">WAKTU</label>
+                  <input type="text" name="time" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08:00 - 10:00" required/>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">RUANGAN</label>
+                <input type="text" name="room" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Gedung A Lt 2" required/>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setIsCourseModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">Batal</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Catatan */}
+      {isNoteModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scaleIn">
+             <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
+              <h3 className="font-bold text-lg">Buat Catatan Baru</h3>
+              <button onClick={() => setIsNoteModalOpen(false)} className="text-blue-200 hover:text-white">&times;</button>
+            </div>
+            <form onSubmit={handleAddNote} className="p-6 space-y-4">
+              <div>
+                <input type="text" name="title" className="w-full text-xl font-bold border-b border-slate-200 px-2 py-2 focus:border-blue-500 outline-none bg-transparent" placeholder="Judul Catatan..." required autoFocus/>
+              </div>
+              <div>
+                <textarea name="content" rows="6" className="w-full bg-yellow-50/50 border border-yellow-100 rounded-2xl p-4 focus:ring-2 focus:ring-yellow-300 outline-none text-slate-700 resize-none leading-relaxed" placeholder="Mulai menulis catatan kuliahmu di sini..." required></textarea>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setIsNoteModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200">Batal</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30">Simpan Catatan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Tugas */}
+      {isAssignmentModalOpen && (
+        <AssignmentModal 
+          onClose={() => setIsAssignmentModalOpen(false)} 
+          onSubmit={handleAddAssignment} 
+        />
+      )}
+
+    </div>
+  );
+}
+
+// Terpisah untuk logika form tugas yang lebih kompleks
+function AssignmentModal({ onClose, onSubmit }) {
+  const [isGroup, setIsGroup] = useState(false);
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn my-8">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-600 p-5 text-white flex justify-between items-center">
+          <h3 className="font-bold text-lg flex items-center gap-2"><ListTodo size={20}/> Catat Tugas Baru</h3>
+          <button type="button" onClick={onClose} className="text-blue-200 hover:text-white bg-white/10 p-1 rounded-full">&times;</button>
+        </div>
+        
+        <form onSubmit={onSubmit} className="p-6 space-y-5">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">JUDUL TUGAS</label>
+            <input type="text" name="title" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Membuat Makalah Sejarah AI" required autoFocus/>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">JENIS TUGAS</label>
+                <select name="type" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="Makalah">Makalah</option>
+                  <option value="Artikel">Artikel</option>
+                  <option value="PPT">Presentasi (PPT)</option>
+                  <option value="Review Jurnal">Review Jurnal</option>
+                  <option value="Projek">Projek Codding</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+             </div>
+             <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">TENGGAT WAKTU (DEADLINE)</label>
+                <input type="datetime-local" name="dueDate" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required/>
+             </div>
+          </div>
+
+          <div>
+             <label className="block text-xs font-bold text-slate-500 mb-2">SIFAT TUGAS</label>
+             <div className="flex gap-4 bg-slate-50 p-1 rounded-xl border border-slate-200">
+               <label className={`flex-1 text-center py-2 rounded-lg cursor-pointer text-sm font-bold transition-all ${!isGroup ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                 <input type="radio" name="isGroup" value="false" className="hidden" onChange={() => setIsGroup(false)} defaultChecked/>
+                 Individu
+               </label>
+               <label className={`flex-1 text-center py-2 rounded-lg cursor-pointer text-sm font-bold transition-all ${isGroup ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                 <input type="radio" name="isGroup" value="true" className="hidden" onChange={() => setIsGroup(true)}/>
+                 Kelompok
+               </label>
+             </div>
+          </div>
+
+          {isGroup && (
+            <div className="animate-fadeIn">
+              <label className="block text-xs font-bold text-slate-500 mb-1">NAMA ANGGOTA KELOMPOK</label>
+              <textarea name="members" rows="2" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-400" placeholder="Contoh: Rina, Budi, Dimas (Pisahkan dengan koma)" required></textarea>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2 mt-6">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">Batal</button>
+            <button type="submit" className="flex-[2] px-4 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all">Simpan Tugas</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Tambahan style CSS kecil untuk animasi
+const styles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-scaleIn {
+    animation: scaleIn 0.2s ease-out forwards;
+  }
+`;
+const styleSheet = document.createElement("style");
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
+  
